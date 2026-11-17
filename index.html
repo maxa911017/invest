@@ -360,6 +360,45 @@ html,body{margin:0;height:100%}
   .phone{padding-top:env(safe-area-inset-top,0px)}
   .nav{padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
 }
+
+/* v5：統整後的做法 */
+.scroll>*{flex-shrink:0}
+.fab{padding:4px 12px 4px 4px}
+.fab svg{width:34px;height:37px}
+.livebuy{background:#fff;border:1.5px solid var(--blue);border-radius:14px;padding:10px 12px;font-size:16px;line-height:1.5}
+.livebuy b{color:var(--blue)}
+.nlabel{background:#fff;border:3px solid #1c1d22;border-radius:6px;padding:10px 12px;color:#1c1d22}
+.nlabel .nh{font-size:20px;font-weight:900;border-bottom:8px solid #1c1d22;padding-bottom:4px;margin-bottom:4px;line-height:1.2}
+.nlabel .one{font-size:13.5px;padding:4px 0 6px;border-bottom:1px solid #1c1d22}
+.nlabel .r{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #1c1d22;font-size:13.5px}
+.nlabel .r b{font-weight:900}
+.nlabel .r.thick{border-bottom:4px solid #1c1d22}
+.nlabel .hold{display:grid;grid-template-columns:70px 1fr 44px;gap:6px;align-items:center;font-size:13px;padding:3px 0}
+.nlabel .hold i{display:block;height:8px;border-radius:4px;background:#306bb7}
+.nlabel details{margin-top:6px;font-size:13px}
+.nlabel summary{cursor:pointer;font-weight:700;color:var(--blue);padding:4px 0}
+.nlabel .src{font-size:11.5px;color:#6c6d76;margin-top:4px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cmp .col{background:#fff;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.cmp .k{font-size:11.5px;color:var(--a-sub);font-weight:700;margin-bottom:-4px}
+.cmp details summary{cursor:pointer;color:var(--blue);font-weight:700}
+.calc{display:flex;flex-direction:column;gap:8px}
+.calc input,.txt{border:1.5px solid var(--hair);border-radius:10px;padding:8px 10px;font:inherit;font-size:15px;width:100%;background:#fff;color:var(--a-ink)}
+.calcres{background:#fff;border-radius:12px;padding:10px 12px;font-size:15px;line-height:1.6}
+.calcres b{font-size:20px}
+.peer{width:100%;border-collapse:collapse;font-size:13px}
+.peer th{font-weight:400;color:var(--a-sub);text-align:right;padding:5px 4px;border-bottom:1px solid var(--hair)}
+.peer th:first-child,.peer td:first-child{text-align:left}
+.peer td{text-align:right;padding:7px 4px;border-bottom:1px solid var(--hair)}
+.peer tr.me td{background:#eef3fb;font-weight:700}
+.task1{display:flex;gap:10px;align-items:center}
+.xbtn{border:0;background:none;font-size:18px;color:#9a9ca5;cursor:pointer;padding:0 4px}
+.prefrow{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--hair)}
+.prefrow:last-child{border-bottom:0}
+.prefrow b{font-size:15px}
+select.sel{border:1.5px solid var(--hair);border-radius:10px;padding:8px 10px;font:inherit;font-size:15px;background:#fff;color:var(--a-ink)}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.reason{background:#fff;border-radius:12px;padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:4px}
 </style>
 </head>
 <body>
@@ -372,14 +411,12 @@ html,body{margin:0;height:100%}
       <div class="scroll" id="scroll"></div>
       <div id="fixedBar"></div>
       <div class="nav" id="nav"></div>
-      <button class="fab" id="fab" type="button">💬 問小幫手<span class="badge">新增</span></button>
+      <button class="fab" id="fab" type="button" aria-label="問小芽"></button>
       <div id="overlay"></div>
       <div id="toastBox"></div>
     </div>
-
   </div>
 </div>
-
 <script>
 (function(){
 const $ = s => document.querySelector(s);
@@ -388,6 +425,7 @@ const pctTxt = c => (c>0?'+':'')+c.toFixed(2)+'%';
 const cls = c => c>0?'up':(c<0?'dn':'flat');
 const arrow = c => c>0?'▲':(c<0?'▼':'');
 const NEW = '<span class="badge">新增</span>';
+const esc = t => String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const IC = {
  home:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z"/></svg>',
@@ -403,32 +441,50 @@ const IC = {
  eyeO:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="24" height="24"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.8"/></svg>',
 };
 
-/* ---------- 示意資料 ---------- */
+/* ---------- 示意資料（持股、配息、價格皆為示意） ---------- */
 const P = {
-  '0050':{name:'元大台灣50',type:'市值型 ETF',etf:true,price:99.70,chg:2.31,vol:'18.29萬',low:76.0,high:103.5,one:'追蹤台灣市值最大的 50 家公司',freq:'半年配息',who:'想跟著台股整體長期成長的人',yield:'約 2–3%',avgDiv:'—',fill:'—'},
-  '006208':{name:'富邦台50',type:'市值型 ETF',etf:true,price:128.50,chg:2.25,vol:'2.41萬',low:98.0,high:132.0,one:'和 0050 追蹤同一個指數，內扣費用較低',freq:'半年配息',who:'同 0050，想壓低持有成本的人',yield:'約 2–3%'},
-  '0056':{name:'元大高股息',type:'高股息 ETF',etf:true,price:36.20,chg:0.56,vol:'5.62萬',low:32.1,high:39.8,one:'挑選預測殖利率較高的 50 檔台股',freq:'季配息',who:'想領股息、每季有現金流的人',yield:'約 7%'},
-  '00878':{name:'國泰永續高股息',type:'高股息 ETF',etf:true,price:21.30,chg:0.47,vol:'4.87萬',low:19.2,high:23.4,one:'從永續評分較好的公司中挑高股息股',freq:'季配息',who:'想領息、也在意永續的人',yield:'約 6–7%'},
-  '2412':{name:'中華電',type:'電信股',etf:false,price:125.0,chg:0.40,vol:'1.02萬',low:116.0,high:130.0,one:'台灣最大電信公司，營收穩定',freq:'年配息',who:'追求穩定配息的存股族',yield:'約 4%',avgDiv:'4.8 元',fill:'約 30 天'},
-  '2886':{name:'兆豐金',type:'金融股',etf:false,price:40.10,chg:-1.47,vol:'3.35萬',low:34.5,high:42.8,one:'官股金控，以銀行業務為主',freq:'年配息',who:'偏好金融股存股的人',yield:'約 4–5%',avgDiv:'1.6 元',fill:'約 45 天'},
+  '0050':{name:'元大台灣50',type:'市值型 ETF',etf:true,price:99.70,chg:2.31,vol:'18.29萬',low:76.0,high:103.5,
+    one:'買進台灣市值最大的 50 家公司，跟著台股整體成長',logic:'依市值大小，挑選台灣上市市值前 50 大公司；市值越大，占比越高',
+    top5:[['台積電',58.2],['鴻海',5.1],['聯發科',4.2],['台達電',2.3],['廣達',1.9]],risk:'台積電占比很高，台積電漲跌對它影響最大；會跟著大盤上下波動',
+    months:'1 月、7 月',lastDiv:'1.00 元（2026/7）',yield:'約 2–3%',idx:'臺灣50指數',rule:'每季檢視成分股，市值排名變動時調整',src:'投信公開說明書、月報（示意）',who:'想跟著台股整體長期成長的人'},
+  '006208':{name:'富邦台50',type:'市值型 ETF',etf:true,price:128.50,chg:2.25,vol:'2.41萬',low:98.0,high:132.0,
+    one:'和 0050 追蹤同一個指數，內扣費用較低',logic:'和 0050 一樣，挑選台灣上市市值前 50 大公司',
+    top5:[['台積電',58.0],['鴻海',5.1],['聯發科',4.2],['台達電',2.3],['廣達',1.9]],risk:'與 0050 相同，集中在台積電；跟著大盤波動',
+    months:'7 月、11 月',lastDiv:'2.20 元（2026/7）',yield:'約 2–3%',idx:'臺灣50指數',rule:'每季檢視成分股',src:'投信公開說明書、月報（示意）',who:'同 0050，想壓低持有成本的人'},
+  '0056':{name:'元大高股息',type:'高股息 ETF',etf:true,price:36.20,chg:0.56,vol:'5.62萬',low:32.1,high:39.8,
+    one:'挑選未來一年預測殖利率較高的 50 檔台股，重視配息',logic:'從市值前 150 大公司中，挑預測現金殖利率最高的 50 檔',
+    top5:[['聯詠',3.9],['華碩',3.6],['廣達',3.4],['聯發科',3.2],['仁寶',3.0]],risk:'配息金額每次會變動；高股息不代表不會跌；換股較頻繁',
+    months:'1、4、7、10 月',lastDiv:'0.80 元（2026/10）',yield:'約 7%',idx:'臺灣高股息指數',rule:'每半年調整成分股，依預測殖利率重新排序',src:'投信公開說明書、月報（示意）',who:'想領股息、每季有現金流的人'},
+  '00878':{name:'國泰永續高股息',type:'高股息 ETF',etf:true,price:21.30,chg:0.47,vol:'4.87萬',low:19.2,high:23.4,
+    one:'從永續評分較好的公司裡挑高股息股',logic:'先篩選 ESG 評分較好的公司，再挑殖利率較高的 30 檔',
+    top5:[['聯發科',4.6],['華碩',4.3],['聯詠',4.0],['廣達',3.8],['國泰金',3.6]],risk:'成分股只有 30 檔，比 50 檔集中；配息金額會變動',
+    months:'2、5、8、11 月',lastDiv:'0.40 元（2026/11）',yield:'約 6–7%',idx:'MSCI 台灣 ESG 永續高股息精選 30 指數',rule:'每半年審核成分股',src:'投信公開說明書、月報（示意）',who:'想領息、也在意永續的人'},
+  '2412':{name:'中華電',type:'電信股',etf:false,price:125.0,chg:0.40,vol:'1.02萬',low:116.0,high:130.0,one:'台灣最大電信公司，營收穩定',yield:'約 3.8%',avgDiv:'4.7 元',fill:'約 30 天',pe:'26 倍',peers:['2412','3045','4904'],who:'追求穩定配息的存股族'},
+  '3045':{name:'台灣大',type:'電信股',etf:false,price:112.0,chg:0.18,vol:'0.61萬',low:104,high:118,one:'台灣第二大電信公司',yield:'約 4.0%',avgDiv:'4.4 元',fill:'約 40 天',pe:'24 倍',peers:['2412','3045','4904'],who:'追求穩定配息的存股族'},
+  '4904':{name:'遠傳',type:'電信股',etf:false,price:86.5,chg:-0.23,vol:'0.48萬',low:78,high:92,one:'遠東集團旗下電信公司',yield:'約 4.1%',avgDiv:'3.5 元',fill:'約 35 天',pe:'25 倍',peers:['2412','3045','4904'],who:'追求穩定配息的存股族'},
+  '2886':{name:'兆豐金',type:'金融股',etf:false,price:40.10,chg:-1.47,vol:'3.35萬',low:34.5,high:42.8,one:'官股金控，以銀行業務為主',yield:'約 4.2%',avgDiv:'1.6 元',fill:'約 45 天',pe:'15 倍',peers:['2886','2892','5880'],who:'偏好金融股存股的人'},
+  '2892':{name:'第一金',type:'金融股',etf:false,price:28.4,chg:-0.70,vol:'2.10萬',low:25.1,high:30.2,one:'官股金控，第一銀行為主',yield:'約 4.4%',avgDiv:'1.2 元',fill:'約 60 天',pe:'14 倍',peers:['2886','2892','5880'],who:'偏好金融股存股的人'},
+  '5880':{name:'合庫金',type:'金融股',etf:false,price:26.9,chg:-0.37,vol:'1.85萬',low:23.8,high:28.6,one:'官股金控，合作金庫銀行為主',yield:'約 3.9%',avgDiv:'1.0 元',fill:'約 70 天',pe:'16 倍',peers:['2886','2892','5880'],who:'偏好金融股存股的人'},
 };
 const INDEX = '加權指數 42,711.92 ▲1,050.22 (2.52%)';
 const BAL = 25000;
-const SETTLE = '11/12（四）';
-const WATCH = {'自選1':['0050','006208','0056','00878'],'自選2':['2412','2886'],'自選3':[]};
+const SETTLE = '11/18（三）';
+const REASONS = ['存股領息','長期配置','逢低分批','先試試看'];
 
 function fresh(){
   return {
-    goal:null,budget:3000,risk:null,dca:null,_dca:null,
-    holdings:{'0056':{qty:1200,cost:34.5,div:2580},'0050':{qty:300,cost:95.0,div:600},'2412':{qty:200,cost:118.0,div:1000},'2886':{qty:1000,cost:37.0,div:1500}},
-    limit:20, rules:{drop:true,quarter:true,time:'盤後'},
-    orders:[], order:null, guide:true, showAmt:false,
+    holdings:{'0056':{qty:1200,cost:34.5},'0050':{qty:300,cost:95.0},'2412':{qty:200,cost:118.0},'2886':{qty:1000,cost:37.0}},
+    watch:{'自選1':['0050','006208','0056','00878'],'自選2':['2412','2886'],'自選3':[]},
+    limit:20, orders:[], order:null, guide:true, remind:true, showAmt:false, taskHidden:false,
     trades:[
       {d:'2026/10/02',side:'買',sym:'2886',qty:500,price:38.6,reason:'逢低分批',mood:'冷靜'},
       {d:'2026/09/12',side:'買',sym:'0050',qty:100,price:97.0,reason:'長期配置',mood:'怕錯過'},
-      {d:'2026/07/15',side:'賣',sym:'0056',qty:200,price:38.0,reason:'急用錢',mood:'有點緊張'},
+      {d:'2026/06/06',side:'買',sym:'0056',qty:400,price:35.1,reason:'存股領息'},
     ],
-    done:[], xp:30, streak:3, today:0, goal:20, studiedToday:false, lastResult:null, pts:90, credit:0, ledger:[], goalHit:false, chests:[], streak7:false, homeTab:'自選/庫存', homeChip:'庫存', watchTab:'庫存', tradeSub:'order', invSeg:'全部庫存', mktSeg:'ETF 白話',
+    reviews:{}, dcas:[], _dca:null, cmp:['0050','0056'], calc:{amt:5000,drop:10},
+    compared:false, tried:false, reviewed:false,
+    done:[], xp:30, streak:3, today:0, goal:20, studiedToday:false, lastResult:null, pts:90, credit:0, ledger:[], goalHit:false, chests:[], streak7:false,
+    homeTab:'自選/庫存', homeChip:'庫存', watchTab:'庫存', tradeSub:'order', invSeg:'全部庫存', mktSeg:'ETF 白話',
     ai:{open:false,msgs:[]}, lesson:null, sheet:null,
   };
 }
@@ -440,7 +496,7 @@ const TABS = ['home','watch','trade','market','service'];
 function go(name,p={}){ stack.push(cur); cur={name,p}; S.sheet=null; render(); }
 function back(){ if(stack.length){ cur=stack.pop(); S.sheet=null; render(); } }
 function tab(name){ stack=[]; cur={name,p:{}}; S.sheet=null; S.ai.open=false; render(); }
-function toast(t){ const b=$('#toastBox'); b.innerHTML=`<div class="toast">${t}</div>`; clearTimeout(toast.t); toast.t=setTimeout(()=>b.innerHTML='',1900); }
+function toast(t){ const b=$('#toastBox'); b.innerHTML=`<div class="toast">${t}</div>`; clearTimeout(toast.t); toast.t=setTimeout(()=>b.innerHTML='',2000); }
 
 function hv(s){ const h=S.holdings[s]; return h? h.qty*P[s].price : 0; }
 function total(){ return Object.keys(S.holdings).reduce((a,s)=>a+hv(s),0); }
@@ -448,49 +504,75 @@ function cost(){ return Object.keys(S.holdings).reduce((a,s)=>a+S.holdings[s].qt
 function dayChg(s){ return hv(s)*P[s].chg/(100+P[s].chg); }
 function todayChange(){ return Object.keys(S.holdings).reduce((a,s)=>a+dayChg(s),0); }
 function tick(p){ return p<10?0.01:p<50?0.05:p<100?0.1:0.5; }
+function chgAmt(x){ return Math.abs(x.price*x.chg/(100+x.chg)).toFixed(2); }
 
-function qrow(s){ const x=P[s]; return `<tr class="clk" data-go="product" data-sym="${s}"><td class="nm"><b>${x.name}</b><span>${s}</span>${S.guide&&x.etf&&cur.name!=='home'?`<div style="font-size:11.5px;color:var(--new);line-height:1.4;margin-top:2px">${x.one}</div>`:''}</td><td class="num ${cls(x.chg)}" style="font-size:17px">${x.price.toFixed(2)}</td><td class="num ${cls(x.chg)}"><div style="font-size:16px">${arrow(x.chg)}${Math.abs(x.price*x.chg/(100+x.chg)).toFixed(2)}</div><div style="font-size:13px">${Math.abs(x.chg).toFixed(2)}%</div></td><td class="num" style="font-size:16px">${x.vol}</td></tr>`; }
+function qrow(s){ const x=P[s]; return `<tr class="clk" data-go="product" data-sym="${s}"><td class="nm"><b>${x.name}</b><span>${s}</span>${S.guide&&x.etf&&cur.name!=='home'?`<div style="font-size:11.5px;color:var(--new);line-height:1.4;margin-top:2px">${x.one}</div>`:''}</td><td class="num ${cls(x.chg)}" style="font-size:17px">${x.price.toFixed(2)}</td><td class="num ${cls(x.chg)}"><div style="font-size:16px">${arrow(x.chg)}${chgAmt(x)}</div><div style="font-size:13px">${Math.abs(x.chg).toFixed(2)}%</div></td><td class="num" style="font-size:16px">${x.vol}</td></tr>`; }
 function qtable(list){ return `<div class="tblcard"><table class="qt"><tr><th><span class="sb">名稱</span></th><th><span class="sb">成交</span></th><th><span class="sb">漲跌</span></th><th><span class="sb">成交量</span></th></tr>${list.length?list.map(qrow).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--a-sub);padding:28px">尚未加入商品</td></tr>'}</table></div>`; }
-function listFor(k){ return k==='庫存'?Object.keys(S.holdings):(WATCH[k]||[]); }
+function listFor(k){ return k==='庫存'?Object.keys(S.holdings):(S.watch[k]||[]); }
 function acctRow(){ return `<div class="acct"><span class="dots2"></span>證 示意帳號 ****-***</div>`; }
+function inWatch(s){ return Object.values(S.watch).some(l=>l.includes(s)); }
 
-/* ---------- 畫面 ---------- */
+/* 陪伴角色「小芽」（原創）：從存錢硬幣長出的嫩芽 */
+function sprout(sz,mood='happy'){
+  const eyes = mood==='cheer'
+    ? '<path d="M33 64 q5 -6 10 0" stroke="#3a2a1a" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M57 64 q5 -6 10 0" stroke="#3a2a1a" stroke-width="3.2" fill="none" stroke-linecap="round"/>'
+    : mood==='think'
+    ? '<circle cx="39" cy="63" r="4.5" fill="#3a2a1a"/><circle cx="62" cy="63" r="4.5" fill="#3a2a1a"/><circle cx="40.5" cy="61.5" r="1.4" fill="#fff"/><circle cx="63.5" cy="61.5" r="1.4" fill="#fff"/>'
+    : '<circle cx="39" cy="64" r="5" fill="#3a2a1a"/><circle cx="61" cy="64" r="5" fill="#3a2a1a"/><circle cx="40.6" cy="62.3" r="1.6" fill="#fff"/><circle cx="62.6" cy="62.3" r="1.6" fill="#fff"/>';
+  const mouth = mood==='cheer' ? '<path d="M40 76 Q50 92 60 76 Z" fill="#8a3b1f"/><path d="M44 81 Q50 86 56 81" fill="#e86b5a"/>'
+    : mood==='think' ? '<ellipse cx="50" cy="79" rx="3.6" ry="3" fill="#8a3b1f"/>'
+    : '<path d="M41 76 Q50 85 59 76" stroke="#8a3b1f" stroke-width="3.2" fill="none" stroke-linecap="round"/>';
+  const arms = mood==='cheer' ? '<path d="M17 66 L6 50" stroke="#e0a024" stroke-width="7" stroke-linecap="round"/><path d="M83 66 L94 50" stroke="#e0a024" stroke-width="7" stroke-linecap="round"/><path d="M4 40 l3 6 l6 -1 l-5 4 l2 6 l-5 -4 l-5 3 l2 -6 l-5 -4 l6 1z" fill="#ffd34d"/>' : '';
+  return `<svg viewBox="0 0 100 110" width="${sz}" height="${Math.round(sz*1.1)}" aria-label="陪伴角色小芽" role="img" style="flex:none;overflow:visible">${arms}
+  <path d="M50 34 C46 24 47 18 50 12" stroke="#3f9a5c" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M50 18 C38 2 18 6 16 18 C28 28 42 26 50 18Z" fill="#4fae6c"/><path d="M50 16 C62 -2 86 2 88 14 C76 26 60 26 50 16Z" fill="#66c283"/>
+  <ellipse cx="50" cy="70" rx="35" ry="33" fill="#f2b73a"/><ellipse cx="50" cy="70" rx="27" ry="25.5" fill="none" stroke="#e09d1f" stroke-width="2.5"/><ellipse cx="50" cy="82" rx="18" ry="12" fill="#f9d27a"/>
+  ${eyes}<circle cx="30" cy="74" r="4.5" fill="#f59a85" opacity=".75"/><circle cx="70" cy="74" r="4.5" fill="#f59a85" opacity=".75"/>${mouth}</svg>`;
+}
+function say(text,mood){ return `<div class="say">${sprout(64,mood)}<div class="bubble">${text}</div></div>`; }
+function ring(v,max,sz=44){ const r=sz/2-4, c=2*Math.PI*r, p=Math.min(1,v/max); return `<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}" aria-label="每日目標 ${v}/${max} XP" role="img"><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="rgba(0,0,0,.1)" stroke-width="5"/><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="#e8952a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c*p} ${c}" transform="rotate(-90 ${sz/2} ${sz/2})"/></svg>`; }
+
 const SCR = {};
 
+/* ----- 首頁：任務卡（一個下一步）＋體驗區 ----- */
+function nextTask(){
+  if(!S.done.includes('e1')) return {t:'先上一堂 3 分鐘 ETF 短課',d:'看懂 ETF 是什麼，答完小測驗就能比較兩檔 ETF',btn:'開始短課',a:'data-act="startLesson" data-id="e1"'};
+  if(!S.compared) return {t:'比較兩檔 ETF',d:'看它們怎麼選股、買了哪些公司、有什麼風險',btn:'去比較',a:'data-go="compare"'};
+  if(!S.tried) return {t:'試算一筆投入金額',d:'輸入想投入的金額，看看跌 10% 時帳面剩多少',btn:'去試算',a:'data-go="product" data-sym="'+S.cmp[0]+'"'};
+  if(!S.dcas.length&&!S.orders.length) return {t:'設定第一筆定期定額，或試下一筆零股',d:'送出前會用白話再確認一次股數、價格與費用',btn:'設定定期定額',a:'data-act="openDca"'};
+  if(!S.reviewed) return {t:'回到庫存，看看當初的理由',d:'持有後可以查看買進理由，並留下回顧',btn:'看庫存',a:'data-act="tradeSub" data-v="inv"'};
+  return null;
+}
 SCR.home = () => {
-  const sd=[!!S.goal, S.done.includes('etf')||!!S.dca, !!S.dca], n=sd.filter(Boolean).length;
-  const tot=total(), c=cost(), tc=todayChange();
-  const m=v=>S.showAmt?v:'<span class="mask"><i>$</i><i>$</i><i>$</i></span>';
-  const nl=nextLesson();
+  const tot=total(), c=cost(), tc=todayChange(); const m=v=>S.showAmt?v:'<span class="mask"><i>$</i><i>$</i><i>$</i></span>';
+  const nl=nextLesson(), tk=nextTask(), all=ALL.filter(l=>!l.soon), n=all.filter(l=>S.done.includes(l.id)).length;
   return {top:`<div class="hbar"><button class="avatar" data-act="toast" data-t="會員中心（原型未製作）"><i></i></button><button class="mode" data-act="toast" data-t="原型示範簡易模式；可一鍵切換專業模式"><span>簡易<i></i></span></button><span class="sp"></span><button class="ib" data-act="toast" data-t="點數（原型未製作）">${IC.coin}</button><button class="ib" data-go="help" aria-label="客服">${IC.head}</button><button class="ib" data-go="search" aria-label="搜尋">${IC.search}</button></div>`,
   body:`
   <div class="card" style="padding:0">
     <div class="row" style="padding:14px 16px 12px;border-bottom:1px solid var(--hair)">${acctRow()}<button class="pillbtn" data-act="toast" data-t="原型僅一個示意帳戶">切換帳戶</button></div>
     <div style="padding:12px 16px 14px">
-      <div class="row"><span style="font-size:16px;color:#55565f">股票總市值 (TWD)</span><span class="tiny">2026/11/10 13:35 ↻</span></div>
+      <div class="row"><span style="font-size:16px;color:#55565f">股票總市值 (TWD)</span><span class="tiny">2026/11/16 13:35 ↻</span></div>
       <div class="row" style="margin-top:4px"><span class="big num">${m(fmt(tot))}</span><button class="ib" style="background:none;width:32px" data-act="eye" aria-label="顯示金額">${S.showAmt?IC.eyeO:IC.eye}</button></div>
       <div class="stat"><div><div class="k">庫存損益 (TWD)</div><div class="v num ${S.showAmt?cls(tot-c):''}">${m((tot-c>=0?'+':'')+fmt(tot-c))}</div></div><div><div class="k">總報酬率</div><div class="v num ${S.showAmt?cls(tot-c):''}">${m(((tot-c)/c*100).toFixed(2)+'%')}</div></div></div>
-      <button class="nw" style="margin-top:10px;width:100%;border-radius:12px;background:#fffaf2;padding:8px 10px;font:inherit;font-size:13.5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:var(--a-ink)" data-go="why"><span>今日 <b class="num ${cls(tc)}">${tc>=0?'+':''}${fmt(tc)}</b> 元，為什麼變了？${NEW}</span><span>›</span></button>
+      ${S.guide?`<button class="nw" style="margin-top:10px;width:100%;border-radius:12px;background:#fffaf2;padding:8px 10px;font:inherit;font-size:13.5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:var(--a-ink)" data-go="why"><span>今日 <b class="num ${cls(tc)}">${tc>=0?'+':''}${fmt(tc)}</b> 元，為什麼變了？${NEW}</span><span>›</span></button>`:''}
     </div></div>
   <div class="ticker"><span>${INDEX}　　櫃買指數 312.45 ▲9.12 (3.01%)　　${INDEX}</span></div>
-  <div class="card nw" style="background:#fffaf2">
-    <div class="row"><h3>新手起步 3 步${NEW}</h3><span class="pill">${n}/3 完成</span></div>
-    <p class="sub" style="margin:2px 0 10px">不用一次學完，照順序來就好。完成後這張卡會收起來。</p>
-    <div class="steps3">
-      <button class="st3 ${sd[0]?'done':''}" data-go="goal"><span class="n">${sd[0]?'✓':'1'}</span><span><b>說說你的目標</b><br><span class="tiny">存股領息、長期累積，還是還在摸索？</span></span></button>
-      <button class="st3 ${sd[1]?'done':''}" data-go="compare"><span class="n">${sd[1]?'✓':'2'}</span><span><b>看懂 ETF 差在哪</b><br><span class="tiny">白話比較 4 檔常見 ETF</span></span></button>
-      <button class="st3 ${sd[2]?'done':''}" data-act="openDca"><span class="n">${sd[2]?'✓':'3'}</span><span><b>設定第一筆定期定額</b><br><span class="tiny">接到既有的定期定額功能</span></span></button>
-    </div></div>
+  ${tk&&!S.taskHidden&&S.guide?`<div class="card nw" style="background:#fffaf2"><div class="row"><span class="tiny" style="font-weight:700;color:var(--new)">下一步 ${NEW}</span><button class="xbtn" data-act="hideTask" aria-label="關閉任務卡">✕</button></div>
+    <div class="task1">${sprout(48,'happy')}<div style="flex:1"><b style="font-size:15.5px">${tk.t}</b><div class="sub">${tk.d}</div></div></div>
+    <button class="btn" style="margin-top:8px" ${tk.a}>${tk.btn}</button></div>`:''}
   <div class="sec">常用功能 <span style="font-size:20px;color:#55565f">✎</span></div>
   <div class="tiles">
     <button class="tile" data-act="openDca"><span class="ic">🐷</span>定期定額</button>
     <button class="tile" data-act="toast" data-t="抽籤／競拍（原型未製作）"><span class="ic">🗳️</span>抽籤/競拍</button>
     <button class="tile" data-act="tradeSub" data-v="orders"><span class="ic">📋</span>委託</button>
     <button class="tile" data-act="toast" data-t="CMA／銀行餘額（原型未製作）"><span class="ic">🏦</span>CMA/<br>銀行餘額</button>
-    <button class="tile nw" data-go="learn"><span class="badge">新增</span><span class="ic">🎓</span>新手學堂</button>
-    <button class="tile nw" data-go="compare"><span class="badge">新增</span><span class="ic">⚖️</span>ETF<br>白話比較</button>
-    <button class="tile nw" data-go="alloc"><span class="badge">新增</span><span class="ic">🧩</span>我的配置</button>
-    <button class="tile nw" data-go="review"><span class="badge">新增</span><span class="ic">📝</span>交易回顧</button>
+  </div>
+  <div class="sec">體驗區 ${NEW}</div>
+  <div class="card nw" style="background:#fffaf2">
+    <div class="row" style="justify-content:flex-start;gap:12px">${sprout(56,'happy')}<div style="flex:1"><div class="row"><b style="font-size:15.5px">🎓 新手學堂</b><span class="pill w">🔥 ${S.streak} 天</span></div>
+      <div class="row" style="margin-top:4px"><span class="sub">學習進度 ${n}/${all.length} 關</span><span class="tiny">今日 ${S.today}/${S.goal} XP</span></div><div class="prog" style="margin:4px 0"><i style="width:${n/all.length*100}%"></i></div>
+      <div class="tiny">${nl?'下一關：'+nl.unit.title+'・'+nl.t:'新手關卡都完成了'}</div><button class="linkb" data-go="rewards">🎟️ 抵用金 ${fmt(S.credit)} 元・學習點 ${S.pts}/100 ›</button></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="btn ghost" data-go="learn">學習路徑</button>${nl?`<button class="btn" data-act="startLesson" data-id="${nl.id}">繼續學習</button>`:`<button class="btn" data-go="compare">ETF 比較</button>`}</div>
   </div>
   ${S.orders.some(o=>o.status==='pending')?`<button class="card nw" style="text-align:left;cursor:pointer;font:inherit;color:inherit;background:#fffaf2" data-act="openOrder"><b>你有 ${S.orders.filter(o=>o.status==='pending').length} 筆委託還在等成交${NEW}</b><br><span class="sub">點這裡看狀態，或取消委託</span></button>`:''}
   <div class="sec">報價速覽</div>
@@ -498,11 +580,6 @@ SCR.home = () => {
   ${S.homeTab==='自選/庫存'?`<div class="chiprow">${['庫存','自選1','自選2','自選3'].map(t=>`<button class="${S.homeChip===t?'on':''}" data-act="homeChip" data-v="${t}">${t}</button>`).join('')}</div>${qtable(listFor(S.homeChip).slice(0,3))}`
    : qtable(S.homeTab==='熱門ETF'?['0050','0056','00878']:['2886','2412','0050'])}
   <button class="more" data-act="tab" data-id="watch">查看更多 ›</button>
-  <div class="card nw" style="background:#fffaf2">
-    <div class="row"><h3>今天的學習${NEW}</h3><span class="pill w">🔥 連續 ${S.streak} 天</span></div>
-    <div class="row" style="justify-content:flex-start;gap:12px;margin:6px 0 8px">${sprout(56,'happy')}<div style="flex:1"><div class="row"><span class="sub">每日目標</span><b class="num" style="font-size:13px">${S.today}/${S.goal} XP</b></div><div class="prog" style="margin:4px 0"><i style="width:${Math.min(100,S.today/S.goal*100)}%"></i></div><div class="tiny">${nl?'下一關：'+nl.unit.title+'・'+nl.t:'新手關卡都完成了'}</div><button class="linkb" data-go="rewards">🎟️ 抵用金 ${fmt(S.credit)} 元・學習點 ${S.pts}/100 ›</button></div></div>
-    ${nl?`<button class="btn ghost" data-act="startLesson" data-id="${nl.id}">繼續學習</button>`:''}
-  </div>
   <div class="sec">推薦功能</div>
   <div class="recs"><div class="rec" style="background:linear-gradient(160deg,#ecd6f3,#c99be0);color:#6b2f8a">雙向借券</div><div class="rec" style="background:linear-gradient(160deg,#d9dcf7,#9da6e6);color:#2f3a8f">股票抽籤</div><div class="rec" style="background:linear-gradient(160deg,#d7f1f3,#8fd0d8);color:#1f6470">股票借貸</div></div>
   <button class="banner" data-act="openDca"><b>定期定額 小額開始</b>每月固定扣款・不用自己挑時機（示意）</button>
@@ -511,54 +588,88 @@ SCR.home = () => {
 
 SCR.watch = () => ({top:`<div class="ptitle"><h2>自選</h2></div>`, body:`
   <div class="tabs" style="margin:0 -14px;border-radius:0">${['庫存','自選1','自選2','自選3'].map(t=>`<button class="${S.watchTab===t?'on':''}" data-act="watchTab" data-v="${t}">${t}</button>`).join('')}</div>
+  ${S.watchTab==='自選1'?`<button class="card nw" style="background:#fffaf2;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center" data-go="compare"><span><b>⚖️ 比較兩檔 ETF ${NEW}</b><br><span class="sub">選股邏輯、主要持股、主要風險並排看</span></span><span>›</span></button>`:''}
+  ${S.watchTab==='自選3'?`<p class="tiny" style="margin:0">「稍後再看」的商品會放在這裡</p>`:''}
   ${qtable(listFor(S.watchTab))}
-  ${S.watchTab==='自選1'?`<div class="explain nw" style="background:#fffaf2;color:#5c3a00">${NEW} ETF 名稱下方的橘字是「一句話白話說明」，新手說明關掉後就會隱藏。</div>`:''}
   <p class="tiny" style="text-align:center">價格皆為示意</p>`});
 
 SCR.search = () => ({back:true,title:'搜尋', body:`
-  <div class="card"><div class="sub">熱門搜尋</div><div class="chips" style="margin-top:6px">${Object.keys(P).map(s=>`<button class="chip" data-go="product" data-sym="${s}">${s} ${P[s].name}</button>`).join('')}</div></div>`});
+  <div class="card"><div class="sub">熱門搜尋</div><div class="chips" style="margin-top:6px">${['0050','006208','0056','00878','2412','2886'].map(s=>`<button class="chip" data-go="product" data-sym="${s}">${s} ${P[s].name}</button>`).join('')}</div></div>`});
 
-/* ----- 行情 ----- */
 SCR.market = () => ({top:`<div class="ptitle"><h2>行情</h2></div>`, body:`
-  <div class="seg">${['大盤','ETF 白話','排行'].map(t=>`<button class="${S.mktSeg===t?'on':''}" data-act="mktSeg" data-v="${t}">${t}${t==='ETF 白話'?' ·新':''}</button>`).join('')}</div>
+  <div class="seg">${['大盤','ETF 白話','排行'].map(t=>`<button class="${S.mktSeg===t?'on':''}" data-act="mktSeg" data-v="${t}">${t}</button>`).join('')}</div>
   ${S.mktSeg==='大盤'?`<div class="card"><div class="sub">加權指數</div><div class="big num up">42,711.92</div><div class="num up">▲1,050.22 (2.52%)</div></div>${qtable(['2886','2412','0050'])}`
   : S.mktSeg==='排行'?qtable(['0050','006208','2412','0056','00878','2886'])
-  : `<div class="card nw" style="background:#fffaf2"><div class="row"><h3>ETF 白話陳列${NEW}</h3><button class="btn sm ghost" data-go="compare">並排比較</button></div>
-      <p class="sub" style="margin:2px 0 6px">每一檔都先告訴你：它買了什麼、適合誰。</p>
-      ${['0050','006208','0056','00878'].map(s=>`<button class="li" data-go="product" data-sym="${s}"><span class="mid"><span class="pill">${P[s].type}</span><b style="margin-top:3px">${P[s].name} <span class="sub">${s}</span></b><span>${P[s].one}・${P[s].freq}</span></span><span class="num ${cls(P[s].chg)}" style="text-align:right">${P[s].price.toFixed(2)}<br><span style="font-size:12.5px">${pctTxt(P[s].chg)}</span></span></button>`).join('')}</div>`}`});
+  : `<div class="card nw" style="background:#fffaf2"><div class="row"><h3>ETF 白話陳列${NEW}</h3><button class="btn sm ghost" data-go="compare">比較兩檔</button></div>
+      ${['0050','006208','0056','00878'].map(s=>`<button class="li" data-go="product" data-sym="${s}"><span class="mid"><span class="pill">${P[s].type}</span><b style="margin-top:3px">${P[s].name} <span class="sub">${s}</span></b><span>${P[s].one}</span></span><span class="num ${cls(P[s].chg)}" style="text-align:right">${P[s].price.toFixed(2)}<br><span style="font-size:12.5px">${pctTxt(P[s].chg)}</span></span></button>`).join('')}</div>`}`});
 
-SCR.compare = () => { if(!S.done.includes('etf')) S.done.push('etf');
-  const rows=[['它買了什麼','one'],['多久配一次息','freq'],['殖利率（示意）','yield'],['比較適合','who']];
+/* ----- ETF 白話比較：一句話＋三欄＋可展開 ----- */
+SCR.compare = () => { S.compared=true; const [a,b]=S.cmp; const ETFS=['0050','006208','0056','00878'];
+  const col=s=>{const x=P[s]; return `<div class="col"><span class="pill" style="align-self:flex-start">${x.type}</span><b style="font-size:15px">${x.name}<br><span class="sub">${s}</span></b><div style="font-weight:700">${x.one}</div>
+    <div class="k">怎麼選股</div><div>${x.logic}</div>
+    <div class="k">哪些持股比重比較大</div><div>${x.top5.slice(0,3).map(([n,p])=>`${n} ${p}%`).join('<br>')}</div>
+    <div class="k">主要風險</div><div>${x.risk}</div>
+    <div class="k">配息</div><div>${x.months}・殖利率${x.yield}</div>
+    <details><summary>更多資訊</summary><div style="margin-top:4px">指數：${x.idx}<br>換股規則：${x.rule}<br><span class="tiny">資料來源：${x.src}</span></div></details>
+    <button class="btn sm ghost" style="width:100%" data-go="product" data-sym="${s}">看標示與試算</button></div>`};
   return {back:true,title:'ETF 白話比較', body:`
-  <div class="explain nw" style="background:#fffaf2;color:#5c3a00">${NEW} 「感覺一堆 ETF 都一樣」？先看最大的差別：<b>市值型</b>跟著大公司成長，<b>高股息</b>重視配息。</div>
-  ${['0050','006208','0056','00878'].map(s=>`<div class="card"><div class="row"><span><span class="pill">${P[s].type}</span><h3 style="margin-top:4px">${P[s].name} <span class="sub">${s}</span></h3></span><button class="btn sm ghost" data-go="product" data-sym="${s}">看報價</button></div>
-    <div style="display:grid;grid-template-columns:96px 1fr;gap:4px 8px;font-size:13.5px;margin-top:6px">${rows.map(([k,f])=>`<span class="sub">${k}</span><span>${P[s][f]}</span>`).join('')}</div></div>`).join('')}
-  <div class="explain">0050 與 006208 追蹤同一個指數，差別主要在股價高低與內扣費用；0056 與 00878 都是高股息，但挑股方式不同。</div>
-  <button class="btn" data-act="openDca">用定期定額開始</button>`};
+  <div class="nw" style="border-radius:16px;padding:10px;background:#fffaf2;display:flex;flex-direction:column;gap:10px">
+  <div class="tiny" style="text-align:right">${NEW}</div>
+  <div class="row" style="gap:6px"><select class="sel" style="flex:1" data-cmp="0" aria-label="第一檔">${ETFS.map(s=>`<option value="${s}" ${s===a?'selected':''}>${s} ${P[s].name}</option>`).join('')}</select><b>vs</b><select class="sel" style="flex:1" data-cmp="1" aria-label="第二檔">${ETFS.map(s=>`<option value="${s}" ${s===b?'selected':''}>${s} ${P[s].name}</option>`).join('')}</select></div>
+  <div class="cmp">${col(a)}${col(b)}</div>
+  ${S.guide?`<div class="explain">${a.slice(0,4)==='0050'&&b==='006208'||a==='006208'&&b==='0050'?'這兩檔追蹤同一個指數，差別主要在股價與內扣費用。':'市值型跟著大公司成長、配息較少；高股息重視配息，但配息金額會變動。'}</div>`:''}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn line" data-act="addWatch" data-sym="${b}">☆ 加入自選</button><button class="btn" data-act="openDca">用定期定額開始</button></div>`};
 };
 
+/* ----- 商品頁：標示卡、跌幅試算、同類比較 ----- */
+function label(s){ const x=P[s]; const max=x.top5[0][1];
+  return `<div class="nlabel nw"><div class="nh">商品標示 <span class="badge" style="vertical-align:4px">新增</span></div>
+  <div class="one">${x.one}</div>
+  <div class="r"><span>怎麼選股</span></div><div style="font-size:13px;padding:0 0 6px;border-bottom:1px solid #1c1d22">${x.logic}</div>
+  <div class="r thick" style="border-bottom:0"><b>前五大持股</b><b>占比</b></div>
+  ${x.top5.map(([n,p])=>`<div class="hold"><span>${n}</span><i style="width:${Math.max(4,p/max*100)}%"></i><span class="num" style="text-align:right">${p}%</span></div>`).join('')}
+  <div class="r thick" style="border-top:4px solid #1c1d22"><span>主要風險</span></div><div style="font-size:13px;padding:0 0 6px;border-bottom:1px solid #1c1d22">${x.risk}</div>
+  <div class="r"><b>配息月份</b><span>${x.months}</span></div>
+  <div class="r"><b>上次配息</b><span>${x.lastDiv}</span></div>
+  <div class="r" style="border-bottom:0"><b>殖利率</b><span>${x.yield}</span></div>
+  <details><summary>展開更多：指數、換股規則、資料來源</summary><div style="line-height:1.7">指數全名：${x.idx}<br>換股規則：${x.rule}<br>適合：${x.who}</div><div class="src">資料來源：${x.src}；持股與配息為示意，實際以公開資訊為準</div></details></div>`; }
+function calcBox(s){ const c=S.calc, after=Math.round(c.amt*(1-c.drop/100)); const x=P[s];
+  return `<div class="card nw" style="background:#fffaf2"><h3>買之前，先試算跌幅 ${NEW}</h3>
+  <div class="calc" style="margin-top:6px"><span class="sub">考慮投入多少？</span>
+   <div class="chips">${[1000,5000,10000,30000].map(v=>`<button class="chip ${c.amt===v?'on':''}" data-act="camt" data-v="${v}">${fmt(v)} 元</button>`).join('')}</div>
+   <input type="number" inputmode="numeric" min="100" step="100" value="${c.amt}" data-calc="amt" aria-label="自行輸入投入金額">
+   <span class="sub">假設跌了多少？</span>
+   <div class="chips">${[5,10,20,30].map(v=>`<button class="chip ${c.drop===v?'on':''}" data-act="cdrop" data-v="${v}">跌 ${v}%</button>`).join('')}</div>
+   <div class="calcres">投入 <b class="num">${fmt(c.amt)}</b> 元，若下跌 ${c.drop}%，帳面約剩 <b class="num dn">${fmt(after)}</b> 元（少 ${fmt(c.amt-after)} 元）。<br><span class="sub">約可買 ${Math.floor(c.amt/x.price)} 股。這筆錢如果近期可能要用，先想想能不能接受這樣的波動。</span></div>
+   <span class="tiny">跌幅只是假設，不是預測。</span></div></div>`; }
+function peers(s){ const x=P[s]; return `<div class="card nw" style="background:#fffaf2"><h3>同類股比較 ${NEW}</h3><p class="sub" style="margin:2px 0 6px">和同產業的公司放在一起看（數值示意）</p>
+  <table class="peer"><tr><th>公司</th><th>股價</th><th>殖利率</th><th>近5年平均股利</th><th>填息天數</th></tr>
+  ${x.peers.map(p=>`<tr class="${p===s?'me':''}"><td>${P[p].name}</td><td class="num">${P[p].price}</td><td>${P[p].yield.replace('約 ','')}</td><td>${P[p].avgDiv}</td><td>${P[p].fill.replace('約 ','')}</td></tr>`).join('')}</table>
+  ${S.guide?`<button class="linkb" style="margin-top:6px" data-act="startLesson" data-id="e3">不知道怎麼看？到體驗區學「殖利率」›</button>`:''}</div>`; }
 SCR.product = ({sym='0056'}) => { const x=P[sym]; const pos=Math.max(0,Math.min(100,Math.round((x.price-x.low)/(x.high-x.low)*100)));
-  const zone=pos<34?'區間偏低':(pos<67?'區間中段':'區間偏高');
   return {back:true,title:`${x.name} ${sym}`, fixed:`<div class="bsbar"><div><button class="b-buy" style="letter-spacing:0;font-size:16px;background:var(--blue)" data-act="dcaFor" data-sym="${sym}">定期定額</button></div><div><button class="b-buy" data-act="buy" data-sym="${sym}">買進</button></div></div>`, body:`
-  <div class="stk"><div class="row"><span><b style="font-size:20px">${x.name}</b><br><span class="sub" style="font-size:15px">${sym}・上市</span></span><span style="text-align:right"><span class="big num ${cls(x.chg)}">${x.price.toFixed(2)}</span><br><span class="num ${cls(x.chg)}">${arrow(x.chg)}${Math.abs(x.price*x.chg/(100+x.chg)).toFixed(2)} (${pctTxt(x.chg)})</span></span></div></div>
-  <div class="card nw" style="background:#fffaf2"><h3>這是什麼？${NEW}</h3><p style="margin:4px 0 6px;font-size:14px">${x.one}</p>
-    <div style="display:grid;grid-template-columns:80px 1fr;gap:3px 8px;font-size:13.5px"><span class="sub">類型</span><span>${x.type}</span><span class="sub">配息</span><span>${x.freq}</span><span class="sub">比較適合</span><span>${x.who}</span></div></div>
-  <div class="card nw" style="background:#fffaf2"><div class="row"><h3>現在的價格在哪裡？${NEW}</h3><span class="pill">${zone}</span></div>
-    <div class="range" style="margin:14px 0 6px"><i style="left:calc(${pos}% - 2px)"></i></div>
-    <div class="row tiny num"><span>近 1 年最低 ${x.low}</span><span>最高 ${x.high}</span></div>
-    <div class="explain" style="margin-top:8px">只告訴你價格在過去一年的位置，不代表會漲或會跌。怕買在高點，可以用<b>定期定額</b>分散買進時間。</div></div>
-  ${x.etf?'':`<div class="card"><h3>股利資訊</h3><div class="kv" style="margin-top:6px"><span class="k">近 5 年平均股利</span><span>${x.avgDiv}</span><span class="k">平均填息天數</span><span>${x.fill}</span><span class="k">殖利率</span><span>${x.yield}</span></div><p class="tiny" style="margin:6px 0 0">現有簡易模式已有的資訊（數值示意）</p></div>`}
+  <div class="stk"><div class="row"><span><b style="font-size:20px">${x.name}</b><br><span class="sub" style="font-size:15px">${sym}・上市</span></span><span style="text-align:right"><span class="big num ${cls(x.chg)}">${x.price.toFixed(2)}</span><br><span class="num ${cls(x.chg)}">${arrow(x.chg)}${chgAmt(x)} (${pctTxt(x.chg)})</span></span></div></div>
+  <div class="nw" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border-radius:14px;padding:6px;background:#fffaf2">
+    <button class="btn sm line" style="width:100%" data-act="addWatch" data-sym="${sym}">${inWatch(sym)?'★ 已在自選':'☆ 加入自選'}</button>
+    <button class="btn sm line" style="width:100%" data-act="later" data-sym="${sym}">🕒 稍後再看</button>
+    <button class="btn sm line" style="width:100%" data-act="toast" data-t="模擬練習將在下一階段開放">🧪 先模擬練習</button></div>
+  ${x.etf?label(sym):`<div class="card"><h3>股利資訊</h3><div class="kv" style="margin-top:6px"><span class="k">近 5 年平均股利</span><span>${x.avgDiv}</span><span class="k">平均填息天數</span><span>${x.fill}</span><span class="k">殖利率</span><span>${x.yield}</span></div><p class="tiny" style="margin:6px 0 0">現有簡易模式已有的資訊（數值示意）</p></div>${peers(sym)}`}
+  ${calcBox(sym)}
+  ${S.guide?`<div class="card"><div class="row"><h3>現在的價格在哪裡？</h3><span class="pill">${pos<34?'區間偏低':pos<67?'區間中段':'區間偏高'}</span></div><div class="range" style="margin:14px 0 6px"><i style="left:calc(${pos}% - 2px)"></i></div><div class="row tiny num"><span>近 1 年最低 ${x.low}</span><span>最高 ${x.high}</span></div></div>`:''}
   <div class="book"><table><tr><th>委買量</th><th>買價</th><th>賣價</th><th>委賣量</th></tr>${book(x)}</table></div>`};
 };
-function book(x){ const t=tick(x.price); const vb=[31,269,371],va=[273,534,327];
-  return [0,1,2].map(i=>{const b=+(x.price-i*t).toFixed(2), a=+(x.price+(i+1)*t).toFixed(2); const c=v=>v>x.price/(1+x.chg/100)?'up':(v<x.price/(1+x.chg/100)?'dn':'');
+function book(x){ const t=tick(x.price); const vb=[31,269,371],va=[273,534,327]; const ref=x.price/(1+x.chg/100);
+  return [0,1,2].map(i=>{const b=+(x.price-i*t).toFixed(2), a=+(x.price+(i+1)*t).toFixed(2); const c=v=>v>ref?'up':(v<ref?'dn':'');
   return `<tr><td>${vb[i]}</td><td class="num ${c(b)}">${b.toFixed(2)}</td><td class="num ${c(a)}">${a.toFixed(2)}</td><td>${va[i]}</td></tr>`}).join(''); }
 
 /* ----- 交易 ----- */
-function newOrder(sym,lot){ const x=P[sym]; lot=lot||'零股'; return {sym,lot,mode:lot==='整股'?'board':'odd',ptype:'limit',price:x.price,qty: lot==='整股'?1:(x.price>100?20:50),reason:null,mood:null}; }
+function newOrder(sym,lot){ const x=P[sym]; lot=lot||'零股'; return {sym,lot,mode:lot==='整股'?'board':'odd',ptype:'limit',price:x.price,qty: lot==='整股'?1:(x.price>100?20:50),reason:null,other:'',mood:null,switched:null}; }
 function calc(o){ const x=P[o.sym], mul=o.mode==='board'?1000:1; const shares=o.qty*mul, price=o.ptype==='market'?x.price:o.price;
-  const amt=Math.round(shares*price); const fee=Math.max(o.mode==='board'?20:1,Math.round(amt*0.001425)); const disc=o.disc!=null?o.disc:Math.min(S.credit,fee); return {shares,amt,fee,disc,totalPay:amt+fee-disc,unit:o.mode==='board'?'張':'股',price}; }
+  const amt=Math.round(shares*price); const fee=Math.max(o.mode==='board'?20:1,Math.round(amt*0.001425)); const disc=o.disc!=null?o.disc:Math.min(S.credit,fee);
+  return {shares,amt,fee,disc,totalPay:amt+fee-disc,unit:o.mode==='board'?'張':'股',price}; }
 const MODEN={board:'整股 ROD',odd:'盤中零股',after:'盤後零股'};
+function reasonText(o){ return o.reason==='其他'?(o.other||'其他'):o.reason; }
 function ttop(){ return `<div class="ttabs">${[['order','下單'],['orders','委託'],['detail','明細'],['inv','庫存']].map(([k,t])=>`<button class="${S.tradeSub===k?'on':''}" data-act="tradeSub" data-v="${k}">${t}</button>`).join('')}<button class="rf" data-act="toast" data-t="已更新">↻</button></div><div class="acctrow">${acctRow()}<button class="pillbtn" data-act="toast" data-t="原型僅一個示意帳戶">切換帳戶</button></div>`; }
 SCR.trade = () => { const sub=S.tradeSub;
   if(sub==='order') return orderView();
@@ -572,371 +683,294 @@ function orderView(){ if(!S.order) S.order=newOrder('0056');
   const modeExp={odd:'<b>盤中零股</b>：9:00–13:30 下單，單位是「股」，1 股也能買，約每分鐘撮合一次。',board:'<b>整股</b>：單位是「張」，<b>1 張 = 1,000 股</b>。金額比較大，請特別確認數量。',after:'<b>盤後零股</b>：13:40–14:30 下單，14:30 一次撮合，單位是「股」。'};
   return {top:ttop(), fixed:`<div class="bsbar"><div><button class="b-buy" data-go="confirm">買進</button></div><div><button class="b-sell" data-act="toast" data-t="原型示範買進流程">賣出</button></div></div>`, body:`
   <div class="stk"><div class="row" style="align-items:flex-start"><span><b style="font-size:20px">${x.name}</b><br><span class="sub" style="font-size:15px">${o.sym}・上市</span> <button class="ib" style="width:36px;height:30px;display:inline-grid;vertical-align:middle" data-go="search">${IC.search}</button><br><span class="tag">現沖</span></span>
-    <span style="text-align:right"><span class="lotsw">${['整股','零股'].map(l=>`<button class="${o.lot===l?'on':''}" data-act="lot" data-v="${l}">${l}</button>`).join('')}</span><br><span class="big num ${cls(x.chg)}">${x.price.toFixed(2)}</span><br><span class="num ${cls(x.chg)}">${arrow(x.chg)}${Math.abs(x.price*x.chg/(100+x.chg)).toFixed(2)} (${pctTxt(x.chg)})</span></span></div></div>
+    <span style="text-align:right"><span class="lotsw">${['整股','零股'].map(l=>`<button class="${o.lot===l?'on':''}" data-act="lot" data-v="${l}">${l}</button>`).join('')}</span><br><span class="big num ${cls(x.chg)}">${x.price.toFixed(2)}</span><br><span class="num ${cls(x.chg)}">${arrow(x.chg)}${chgAmt(x)} (${pctTxt(x.chg)})</span></span></div></div>
   <div class="kinds">${['現股','融資','融券','借券','沖賣'].map((k,i)=>`<button class="${i===0?'on':''}" ${i?'data-act="toast" data-t="原型僅示範現股"':''}>${k}</button>`).join('')}</div>
   <div class="dd"><button data-act="sheet" data-v="mode">${MODEN[o.mode]}${o.ptype==='market'?'・市價':''}</button><button data-act="toast" data-t="當日委託：今天收盤前沒成交就自動失效">當日委託</button><button class="nodd" data-act="sheet" data-v="ptype">…</button></div>
   <div class="stp"><div class="stepper"><button data-act="qty" data-d="-1" aria-label="減少">−</button><span class="v">${fmt(o.qty)}</span><button data-act="qty" data-d="1" aria-label="增加">＋</button></div>
     <div class="stepper">${o.ptype==='market'?'<span class="v">市價</span>':`<button data-act="price" data-d="-1" aria-label="降價">−</button><span class="v">${o.price.toFixed(2)}</span><button data-act="price" data-d="1" aria-label="加價">＋</button>`}</div></div>
   <div class="row" style="font-size:15.5px;padding:0 2px"><span>單位：${o.mode==='board'?'1000股':'股'}</span><span>金額約：<b class="num">${fmt(c.amt)}</b> 元</span></div>
-  <div class="guide nw">
-    <div class="gh"><span>新手說明${NEW}</span><button class="sw ${g?'on':''}" data-act="guide" aria-label="切換新手說明"></button></div>
-    ${g?`<div class="explain">${modeExp[o.mode]} <button class="chip" style="padding:0 8px;font-size:12px" data-act="ask" data-q="${o.mode==='board'?'整股跟零股差在哪？':'盤中零股是什麼？'}">再問小幫手</button></div>
-    ${o.mode==='board'?`<div class="warn">你現在要買 <b>${fmt(o.qty)} 張 = ${fmt(c.shares)} 股</b>，約 <b>${fmt(c.amt)} 元</b>。只想買幾十股，請切到上方的「零股」。</div>`:`<div class="chips">${[10,50,100,270].map(v=>`<button class="chip ${o.qty===v?'on':''}" data-act="qset" data-v="${v}">${v} 股</button>`).join('')}</div>`}
-    <div class="explain">${o.ptype==='limit'?'<b>限價</b>：數字欄是你願意付的最高價。市場價格比它高就不會成交，不會買貴，但可能買不到。':'<b>市價</b>：照當下價格馬上成交，可能比你看到的價格高一點。'}${o.ptype==='limit'&&o.price<x.price-0.001?' 你的價格低於現價，可能要等一下才會成交。':''}</div>
-    <div class="kv num"><span class="k">股票金額（${fmt(c.shares)} 股 × ${c.price.toFixed(2)}）</span><span>${fmt(c.amt)} 元</span><span class="k">手續費（示意）</span><span>${fmt(c.fee)} 元</span>${c.disc?`<span class="k" style="color:var(--new)">學習獎勵抵用金</span><span style="color:var(--new)">−${fmt(c.disc)} 元</span>`:''}<b>成交後 ${SETTLE} 扣款約</b><b>${fmt(c.totalPay)} 元</b></div>
-    <div class="${short?'bad':'ok'}">${short?`交割帳戶餘額 ${fmt(BAL)} 元，還差 <b>${fmt(c.totalPay-BAL)} 元</b>。扣款日前沒補足會<b>違約交割</b>。`:`交割帳戶餘額 ${fmt(BAL)} 元，足夠。`}</div>
-    <div class="${over?'warn':'explain'}">${over?`買完後${x.name}會占你資產 <b>${after.toFixed(0)}%</b>，超過你設定的單一個股上限 ${S.limit}%。`:`買完後${x.name}約占你資產 ${after.toFixed(0)}%${x.etf?'（ETF 已分散）':`（上限 ${S.limit}%）`}。`}</div>
-    <div style="font-size:13px;font-weight:700">為什麼買這筆？<span class="tiny" style="font-weight:400">選填，之後在交易回顧對照</span></div>
-    <div class="chips">${['存股領息','逢低分批','長期配置','先試試看'].map(t=>`<button class="chip ${o.reason===t?'on':''}" data-act="oset" data-k="reason" data-v="${t}">${t}</button>`).join('')}</div>
-    <div class="chips">${['冷靜','怕錯過','有點緊張'].map(t=>`<button class="chip ${o.mood===t?'on':''}" data-act="oset" data-k="mood" data-v="${t}">心情：${t}</button>`).join('')}</div>`
-    :'<span class="tiny">已關閉。開啟後會在每個欄位旁顯示白話說明、金額試算與提醒。</span>'}
-  </div>
-  <div class="book"><table><tr><th>委買量</th><th>買價</th><th>賣價</th><th>委賣量</th></tr>${book(x)}</table></div>
-  <div class="seg"><button class="on">分時明細</button><button data-act="tradeSub" data-v="inv">庫存損益</button><button data-act="toast" data-t="可下單餘額 ${fmt(BAL)} 元（示意）">額度/交割款</button></div>`};
+  <div class="livebuy nw" aria-live="polite">你正在買進 <b>${fmt(c.shares)} 股</b>${o.mode==='board'?`（${fmt(o.qty)} 張）`:''}・${MODEN[o.mode].replace(' ROD','')}<br><span class="sub">${fmt(c.shares)} 股 × 每股${o.ptype==='limit'?'最高 '+o.price.toFixed(2):'市價約 '+x.price.toFixed(2)} 元 ≈ ${fmt(c.amt)} 元，另加手續費約 ${fmt(c.fee)} 元</span> ${NEW}</div>
+  ${o.switched?`<div class="warn">已切換為<b>${o.switched}</b>：${o.switched==='整股'?'數量單位變成「張」，1 張 = 1,000 股':'數量單位變成「股」'}，數量已重設，請重新確認。</div>`:''}
+  ${o.mode==='board'?`<div class="warn">注意：<b>${fmt(o.qty)} 張 = ${fmt(c.shares)} 股</b>，約 <b>${fmt(c.amt)} 元</b>。只想買幾十股，請切到「零股」。</div>`:''}
+  ${g?`<div class="explain nw">${modeExp[o.mode]} ${o.ptype==='limit'?'價格欄是<b>限價</b>：你願意付的最高價，價格沒到會排隊等。':'<b>市價</b>：照當下價格成交，可能比看到的高一點。'} <button class="chip" style="padding:0 8px;font-size:12px" data-act="ask" data-q="${o.mode==='board'?'整股跟零股差在哪？':'盤中零股是什麼？'}">問小芽</button></div>
+  ${o.mode!=='board'?`<div class="chips">${[10,50,100,270].map(v=>`<button class="chip ${o.qty===v?'on':''}" data-act="qset" data-v="${v}">${v} 股</button>`).join('')}</div>`:''}`:''}
+  <div class="card"><div class="kv num"><span class="k">股票金額</span><span>${fmt(c.amt)} 元</span><span class="k">手續費（示意）</span><span>${fmt(c.fee)} 元</span>${c.disc?`<span class="k" style="color:var(--new)">學習獎勵抵用金</span><span style="color:var(--new)">−${fmt(c.disc)} 元</span>`:''}<b>成交後 ${SETTLE} 扣款約</b><b>${fmt(c.totalPay)} 元</b></div>
+    <div class="${short?'bad':'ok'}" style="margin-top:8px">${short?`交割帳戶餘額 ${fmt(BAL)} 元，還差 <b>${fmt(c.totalPay-BAL)} 元</b>。扣款日前沒補足會<b>違約交割</b>。`:`交割帳戶餘額 ${fmt(BAL)} 元，足夠。`}</div>
+    ${over?`<div class="warn" style="margin-top:8px">買完後${x.name}會占你資產 <b>${after.toFixed(0)}%</b>，超過單一個股 ${S.limit}% 的提醒線。</div>`:''}</div>
+  <div class="card nw" style="background:#fffaf2"><div style="font-size:14px;font-weight:700">為什麼買這筆？${NEW} <span class="tiny" style="font-weight:400">選填，持有後可以在庫存查看</span></div>
+    <div class="chips" style="margin-top:6px">${[...REASONS,'其他'].map(t=>`<button class="chip ${o.reason===t?'on':''}" data-act="oset" data-k="reason" data-v="${t}">${t==='其他'?'其他／自行輸入':t}</button>`).join('')}</div>
+    ${o.reason==='其他'?`<input class="txt" style="margin-top:6px" maxlength="60" placeholder="寫下你的理由，例如：朋友推薦，想先少量試試" value="${esc(o.other)}" data-input="other" aria-label="自行輸入理由">`:''}
+    <div class="chips" style="margin-top:6px">${['冷靜','怕錯過','有點緊張'].map(t=>`<button class="chip ${o.mood===t?'on':''}" data-act="oset" data-k="mood" data-v="${t}">心情：${t}</button>`).join('')}</div></div>
+  <p class="tiny" style="text-align:center">新手輔助：${g?'開':'關'}・可到「服務 → 偏好設定」調整</p>
+  <div class="book"><table><tr><th>委買量</th><th>買價</th><th>賣價</th><th>委賣量</th></tr>${book(x)}</table></div>`};
 }
 function stName(st){ return {pending:'委託中',filled:'已成交',cancelled:'已取消',cancelling:'取消中'}[st]; }
 function ordersView(){ const os=[...S.orders].reverse();
-  return os.length?`<div class="tblcard">${os.map(o=>{const x=P[o.sym],c=calc(o); return `<button class="li" style="padding:12px 14px" data-go="status" data-id="${o.id}"><span class="mid"><b>買進 ${x.name} <span class="sub">${o.sym}</span></b><span class="num">${MODEN[o.mode]}・${o.ptype==='limit'?'限價 '+o.price.toFixed(2):'市價'}・${fmt(c.shares)} 股</span></span><span class="pill ${o.status==='pending'?'w':o.status==='filled'?'g':'x'}">${stName(o.status)}</span><span>›</span></button>`}).join('')}</div>
-   <div class="explain nw" style="background:#fffaf2;color:#5c3a00">${NEW} 點任一筆委託，可看「送出 → 委託中 → 成交／已取消」的狀態說明。</div>`
-   :`<div class="card" style="text-align:center;padding:30px 14px"><span class="sub">今天沒有委託</span><br><button class="btn sm ghost" style="margin-top:10px" data-act="tradeSub" data-v="order">去下單</button></div>`; }
+  return `${S.dcas.length?`<button class="card nw" style="background:#fffaf2;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center" data-go="dcaDetail"><span><b>定期定額明細 ${NEW}</b><br><span class="sub">${S.dcas.length} 筆設定・看扣款與買進結果</span></span><span>›</span></button>`:''}
+  ${os.length?`<div class="tblcard">${os.map(o=>{const x=P[o.sym],c=calc(o); return `<button class="li" style="padding:12px 14px" data-go="status" data-id="${o.id}"><span class="mid"><b>買進 ${x.name} <span class="sub">${o.sym}</span></b><span class="num">${MODEN[o.mode]}・${o.ptype==='limit'?'限價 '+o.price.toFixed(2):'市價'}・${fmt(c.shares)} 股</span></span><span class="pill ${o.status==='pending'?'w':o.status==='filled'?'g':'x'}">${stName(o.status)}</span><span>›</span></button>`}).join('')}</div>`
+   :`<div class="card" style="text-align:center;padding:30px 14px"><span class="sub">今天沒有委託</span><br><button class="btn sm ghost" style="margin-top:10px" data-act="tradeSub" data-v="order">去下單</button></div>`}`; }
 function detailView(){ const f=S.orders.filter(o=>o.status==='filled');
   return f.length?`<div class="tblcard">${f.map(o=>{const x=P[o.sym],c=calc(o);return `<div class="li" style="padding:12px 14px;cursor:default"><span class="mid"><b>買進 ${x.name}</b><span class="num">成交 ${fmt(c.shares)} 股 @ ${c.price.toFixed(2)}・${SETTLE} 交割</span></span><span class="num">${fmt(c.totalPay)}</span></div>`}).join('')}</div>`:`<div class="card" style="text-align:center;padding:30px 14px"><span class="sub">目前無資料</span></div>`; }
 function invView(){ const tot=total(), c=cost(), tc=todayChange(), seg=S.invSeg;
-  const div=Object.keys(S.holdings).reduce((a,s)=>a+(S.holdings[s].div||0),0);
-  const overs=Object.keys(S.holdings).filter(s=>!P[s].etf&&hv(s)/tot*100>S.limit);
   return `<div class="seg">${['全部庫存','資券餘額','當沖未實損'].map(t=>`<button class="${seg===t?'on':''}" data-act="invSeg" data-v="${t}">${t}</button>`).join('')}</div>
   ${seg!=='全部庫存'?'<div class="card" style="text-align:center;padding:30px">目前無資料</div>':`
   <div class="row" style="justify-content:flex-start;gap:8px"><span style="font-size:20px;color:#55565f">⚙</span><button class="chip">交易類別 ▾</button><button class="chip">標的 ▾</button></div>
   <div class="card" style="padding:0"><div style="padding:14px 16px">
     <div style="font-size:15px;color:#55565f">股票總市值 (TWD)</div><div class="big num">${fmt(tot)}</div>
     <div class="stat"><div><div class="k">總成本 (TWD)</div><div class="v num">${fmt(c)}</div></div><div><div class="k">總報酬</div><div class="v num ${cls(tot-c)}">${tot-c>=0?'+':''}${fmt(tot-c)}<br><span style="font-size:15px">(${((tot-c)/c*100).toFixed(2)}%)</span></div></div></div>
-    <button class="nw" style="margin-top:10px;width:100%;border-radius:12px;background:#fffaf2;padding:8px 10px;font:inherit;font-size:13.5px;cursor:pointer;display:flex;justify-content:space-between;color:var(--a-ink)" data-go="why"><span>今日 <b class="num ${cls(tc)}">${tc>=0?'+':''}${fmt(tc)}</b> 元，為什麼變了？${NEW}</span><span>›</span></button></div>
+    <button class="nw" style="margin-top:10px;width:100%;border-radius:12px;background:#fffaf2;padding:8px 10px;font:inherit;font-size:13.5px;cursor:pointer;display:flex;justify-content:space-between;color:var(--a-ink)" data-go="why"><span>今日 <b class="num ${cls(tc)}">${tc>=0?'+':''}${fmt(tc)}</b> 元，報酬怎麼算、為什麼變了？${NEW}</span><span>›</span></button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hair)"><button style="border:0;background:none;font:inherit;color:var(--blue);padding:12px;font-size:15px;cursor:pointer" data-act="toast" data-t="除權息總覽（現有功能）">🗒 除權息總覽</button><button style="border:0;border-left:1px solid var(--hair);background:none;font:inherit;color:var(--blue);padding:12px;font-size:15px;cursor:pointer" data-act="toast" data-t="CMA／銀行餘額（現有功能）">🗒 CMA/銀行餘額</button></div></div>
-  <div class="card nw" style="background:#fffaf2"><div class="row"><h3>今年累積領到的股息${NEW}</h3><b class="num" style="font-size:19px">${fmt(div)} 元</b></div><p class="sub" style="margin:2px 0 0">每次入帳自動加總，不用自己用 Excel 算（示意）。</p></div>
-  <button class="card nw" style="background:#fffaf2;text-align:left;font:inherit;color:inherit;cursor:pointer" data-go="alloc"><div class="row"><h3>我的配置${NEW}</h3><span>›</span></div>${allocBar(tot)}${overs.length?`<div class="warn" style="margin-top:8px">${overs.map(s=>`${P[s].name}占 <b>${(hv(s)/tot*100).toFixed(0)}%</b>`).join('、')}，超過你設定的上限 ${S.limit}%。</div>`:''}</button>
+  ${S.guide?`<p class="tiny nw" style="margin:0;border-radius:8px;padding:4px 8px;background:#fffaf2">${NEW} 點任一檔持股，可以看到當初的買進理由並留下回顧</p>`:''}
   <div class="tblcard"><table class="qt"><tr><th>名稱</th><th>市價<br>均價</th><th>股數<br>可下單數</th><th>損益</th></tr>
-  ${Object.keys(S.holdings).map(s=>{const h=S.holdings[s],x=P[s],pl=(x.price-h.cost)*h.qty;return `<tr class="clk" data-go="product" data-sym="${s}"><td class="nm"><b>${x.name}</b><span style="color:var(--blue)">現股</span></td><td class="num">${x.price.toFixed(2)}<br>${h.cost.toFixed(2)}</td><td class="num">${fmt(h.qty)}<br>${fmt(h.qty)}</td><td class="num ${cls(pl)}">${pl>=0?'+':''}${fmt(pl)}<br>${pctTxt((x.price-h.cost)/h.cost*100)}</td></tr>`}).join('')}</table></div>
-  <button class="card nw" style="background:#fffaf2;text-align:left;font:inherit;color:inherit;cursor:pointer" data-go="review"><div class="row"><h3>交易回顧${NEW}</h3><span>›</span></div><span class="sub">把當時的理由、心情和後來的結果放在一起看</span></button>
+  ${Object.keys(S.holdings).map(s=>{const h=S.holdings[s],x=P[s],pl=(x.price-h.cost)*h.qty, hasR=S.trades.some(t=>t.sym===s&&t.reason);return `<tr class="clk" data-go="holding" data-sym="${s}"><td class="nm"><b>${x.name}</b><span style="color:var(--blue)">現股</span>${hasR?'<span class="badge" style="margin-left:4px">有理由</span>':''}</td><td class="num">${x.price.toFixed(2)}<br>${h.cost.toFixed(2)}</td><td class="num">${fmt(h.qty)}<br>${fmt(h.qty)}</td><td class="num ${cls(pl)}">${pl>=0?'+':''}${fmt(pl)}<br>${pctTxt((x.price-h.cost)/h.cost*100)}</td></tr>`}).join('')}</table></div>
   <div class="card"><div class="row"><b>注意事項</b><span>⌃</span></div></div>`}`; }
-function allocBar(tot){ const g={}; Object.keys(S.holdings).forEach(s=>{g[P[s].type]=(g[P[s].type]||0)+hv(s)});
-  const col={'高股息 ETF':'#e8952a','市值型 ETF':'#306bb7','電信股':'#7c9cc4','金融股':'#2f8f5c'};
-  return `<div class="bar" style="margin:8px 0">${Object.entries(g).map(([k,v])=>`<i style="width:${v/tot*100}%;background:${col[k]||'#999'}"></i>`).join('')}</div><div class="legend">${Object.entries(g).map(([k,v])=>`<span><i style="background:${col[k]||'#999'}"></i>${k} ${(v/tot*100).toFixed(0)}%</span>`).join('')}</div>`; }
 
-SCR.confirm = () => { const o=S.order,x=P[o.sym],c=calc(o);
+SCR.holding = ({sym='0050'}) => { const h=S.holdings[sym], x=P[sym]; if(!h) return {back:true,title:'持股',body:'<p class="sub">已沒有這檔持股。</p>'};
+  const v=h.qty*x.price, pl=(x.price-h.cost)*h.qty; const rs=S.trades.filter(t=>t.sym===sym); const rv=S.reviews[sym]||[]; const d=S._rv||(S._rv={tag:null,txt:''});
+  return {back:true,title:`${x.name} ${sym}`, body:`
+  <div class="card"><div class="row"><span class="sub">持有 ${fmt(h.qty)} 股・平均成本 ${h.cost.toFixed(2)}</span><span class="tiny">現股</span></div>
+    <div class="row" style="margin-top:6px"><span class="big num">${fmt(v)}</span><span class="num ${cls(pl)}" style="font-size:17px;font-weight:700">${pl>=0?'+':''}${fmt(pl)}（${pctTxt((x.price-h.cost)/h.cost*100)}）</span></div></div>
+  <div class="card nw" style="background:#fffaf2"><h3>報酬怎麼算？${NEW}</h3><p style="margin:4px 0 0;font-size:14px;line-height:1.7">（現價 ${x.price.toFixed(2)} − 平均成本 ${h.cost.toFixed(2)}）× ${fmt(h.qty)} 股 ＝ <b class="${cls(pl)}">${pl>=0?'+':''}${fmt(pl)} 元</b></p><p class="tiny" style="margin:4px 0 0">這裡還沒算進已領到的股息；含息報酬會在下一階段加入。</p></div>
+  <div class="card nw" style="background:#fffaf2"><h3>當初為什麼買？${NEW}</h3>
+    ${rs.length?rs.map(t=>`<div class="reason" style="margin-top:6px"><span class="tiny">${t.d}・${t.side} ${fmt(t.qty)} 股 @ ${t.price}</span><b>${t.reason?'理由：'+esc(t.reason):'沒有記下理由'}</b>${t.mood?`<span class="sub">當時心情：${t.mood}</span>`:''}</div>`).join(''):'<p class="sub" style="margin:4px 0 0">這檔沒有交易紀錄。</p>'}</div>
+  <div class="card nw" style="background:#fffaf2"><h3>留下回顧 ${NEW}</h3><p class="sub" style="margin:2px 0 6px">現在回頭看，你的想法有沒有變？</p>
+    <div class="quick">${['照原計畫持有','想再加碼','想減碼','還不確定'].map(t=>`<button class="chip ${d.tag===t?'on':''}" data-act="rvtag" data-v="${t}">${t}</button>`).join('')}</div>
+    <textarea class="txt" style="margin-top:6px;min-height:64px" maxlength="200" placeholder="寫幾句給未來的自己（選填）" data-input="rvtxt" aria-label="回顧內容">${esc(d.txt)}</textarea>
+    <button class="btn" style="margin-top:8px" data-act="saveRv" data-sym="${sym}" ${d.tag||d.txt?'':'disabled'}>儲存回顧</button>
+    ${rv.map(r=>`<div class="reason" style="margin-top:6px"><span class="tiny">${r.d}</span><b>${r.tag||''}</b>${r.txt?`<span>${esc(r.txt)}</span>`:''}</div>`).join('')}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn line" data-go="product" data-sym="${sym}">商品資訊</button><button class="btn" data-act="buy" data-sym="${sym}">買進</button></div>`};
+};
+
+SCR.confirm = () => { const o=S.order,x=P[o.sym],c=calc(o); const pr=o.ptype==='limit'?'每股最高 '+o.price.toFixed(2)+' 元':'市價（約 '+x.price.toFixed(2)+' 元）';
   return {back:true,title:'委託確認', body:`
   <div class="card nw" style="background:#fffaf2">
-    <span class="tiny">請確認這句話是你想做的${NEW}</span>
-    <p style="font-size:17px;line-height:1.75;margin:6px 0 0">你要用 <b>${MODEN[o.mode].replace(' ROD','')}</b>、<b>${o.ptype==='limit'?'限價 '+o.price.toFixed(2)+' 元':'市價'}</b>，買進 <b>${x.name} ${o.sym}</b> 共 <b>${fmt(c.shares)} 股</b>${o.mode==='board'?`（${o.qty} 張）`:''}。</p>
-    <p style="font-size:15px;margin:8px 0 0">成交後在 <b>${SETTLE}</b> 從交割帳戶扣約 <b class="num">${fmt(c.totalPay)} 元</b>。</p></div>
-  <div class="card"><div class="kv num"><span class="k">商品</span><span>${x.name} ${o.sym}</span><span class="k">買賣別</span><span class="up">現股買進</span><span class="k">交易方式</span><span>${MODEN[o.mode]}・當日委託</span><span class="k">價格</span><span>${o.ptype==='limit'?o.price.toFixed(2):'市價'}</span><span class="k">數量</span><span>${fmt(o.qty)} ${c.unit}</span><span class="k">金額約</span><span>${fmt(c.amt)} 元</span><span class="k">手續費（示意）</span><span>${fmt(c.fee)} 元</span>${c.disc?`<span class="k" style="color:var(--new)">學習獎勵抵用金 ${NEW}</span><span style="color:var(--new)">−${fmt(c.disc)} 元</span>`:''}</div></div>
+    <span class="tiny">送出前，請確認這段話是你想做的 ${NEW}</span>
+    <p style="font-size:17px;line-height:1.75;margin:6px 0 0">你要用 <b>${MODEN[o.mode].replace(' ROD','')}</b> 買進 <b>${x.name} ${o.sym}</b> 共 <b>${fmt(c.shares)} 股</b>${o.mode==='board'?`（${o.qty} 張）`:''}。</p>
+    <p style="font-size:15px;line-height:1.75;margin:6px 0 0"><b>${fmt(c.shares)} 股 × ${pr}</b>，若全數以此價格成交，約需 <b class="num">${fmt(c.amt)} 元</b>，加手續費約 ${fmt(c.fee)} 元${c.disc?`（學習獎勵抵用 −${fmt(c.disc)} 元）`:''}，${SETTLE} 扣款約 <b class="num">${fmt(c.totalPay)} 元</b>。</p>
+    ${o.reason?`<p class="sub" style="margin:6px 0 0">你的理由：${esc(reasonText(o))}（之後可以在庫存查看）</p>`:''}</div>
+  <div class="card"><div class="kv num"><span class="k">商品</span><span>${x.name} ${o.sym}</span><span class="k">買賣別</span><span class="up">現股買進</span><span class="k">交易方式</span><span>${MODEN[o.mode]}・當日委託</span><span class="k">價格</span><span>${o.ptype==='limit'?o.price.toFixed(2):'市價'}</span><span class="k">數量</span><span>${fmt(o.qty)} ${c.unit}</span><span class="k">金額約</span><span>${fmt(c.amt)} 元</span><span class="k">手續費（示意）</span><span>${fmt(c.fee)} 元</span></div></div>
   ${c.totalPay>BAL?`<div class="bad">交割帳戶餘額不足，還差 ${fmt(c.totalPay-BAL)} 元。可以先減少數量，或在扣款日前轉入。</div>`:''}
-  <div class="explain">送出後會先變成「委託中」，代表正在排隊等成交；還沒成交前都可以取消。</div>
+  ${S.guide?`<div class="explain">送出後會先變成「委託中」，代表正在排隊；還沒成交前都可以取消。</div>`:''}
   <button class="btn" style="background:var(--up)" data-act="submit">確認送出</button>
   <button class="btn line" data-act="back">返回修改</button>`};
 };
-
 SCR.status = ({id}) => { const o=S.orders.find(z=>z.id===id)||S.orders[S.orders.length-1];
   if(!o) return {back:true,title:'委託狀態',body:'<p class="sub">目前沒有委託。</p>'};
   const x=P[o.sym],c=calc(o),st=o.status;
   const steps=[['送出','委託已送到交易所','done'],['委託中','正在排隊等成交，還可以取消',st==='pending'?'now':'done'],
     (st==='cancelled'||st==='cancelling')?['已取消',st==='cancelling'?'取消處理中，請稍等…':'這筆不會成交，也不會扣款',st==='cancelled'?'x':'now']:['已成交',st==='filled'?`成交 ${fmt(c.shares)} 股，${SETTLE} 扣約 ${fmt(c.totalPay)} 元`:'成交後會推播通知你',st==='filled'?'done':'']];
-  return {back:true,title:'委託狀態', body:`
+  return {back:true,title:'委託詳情', body:`
   <div class="card"><div class="row"><b>買進 ${x.name} ${o.sym}</b><span class="pill ${st==='pending'?'w':st==='filled'?'g':'x'}">${stName(st)}</span></div>
     <span class="sub num">${MODEN[o.mode]}・${o.ptype==='limit'?'限價 '+o.price.toFixed(2):'市價'}・${fmt(c.shares)} 股</span></div>
-  <div class="card nw" style="background:#fffaf2"><div style="font-size:12px;margin-bottom:8px">委託進度${NEW}</div><div class="tl">${steps.map(([t,d,k],i)=>`<div class="s ${k}"><span class="dot">${k==='done'?'✓':(k==='x'?'×':i+1)}</span><span><b>${t}</b><br><span class="sub">${d}</span></span></div>`).join('')}</div></div>
-  ${st==='pending'?`<div class="explain">${o.ptype==='limit'&&o.price<x.price?'你的限價比目前賣方的價格低，所以還在排隊。可以再等等，或取消後用新的價格重下。':'盤中零股約每分鐘撮合一次，通常很快就會成交。'}</div>
+  <div class="card nw" style="background:#fffaf2"><div style="font-size:12px;margin-bottom:8px">委託進度 ${NEW}</div><div class="tl">${steps.map(([t,d,k],i)=>`<div class="s ${k}"><span class="dot">${k==='done'?'✓':(k==='x'?'×':i+1)}</span><span><b>${t}</b><br><span class="sub">${d}</span></span></div>`).join('')}</div></div>
+  ${st==='pending'?`${S.guide?`<div class="explain">${o.ptype==='limit'&&o.price<x.price?'你的限價比目前賣方的價格低，所以還在排隊。':'盤中零股約每分鐘撮合一次，通常很快就會成交。'}</div>`:''}
     <button class="btn line" data-act="cancel" data-id="${o.id}">取消這筆委託</button>
     <button class="btn ghost" data-act="fill" data-id="${o.id}">（原型操作）模擬成交</button>`:''}
-  ${st==='filled'?`<div class="ok">買到了！已放進你的庫存。${o.reason?`你記下的理由是「${o.reason}」，之後可以在交易回顧對照結果。`:''}</div><button class="btn" data-act="tradeSub" data-v="inv">看我的庫存</button>`:''}
+  ${st==='filled'?`<div class="ok">買到了！已放進庫存。${o.reason?`你記下的理由「${esc(reasonText(o))}」會跟著這筆持股。`:''}</div><button class="btn" data-go="holding" data-sym="${o.sym}">看這筆持股與理由</button>`:''}
   ${st==='cancelled'?`<div class="ok">取消成功。這筆委託不會成交，也不會從帳戶扣款。</div><button class="btn ghost" data-act="buy" data-sym="${o.sym}">用新的條件重新下單</button>`:''}`};
 };
 
-/* ----- 新手起步 ----- */
-SCR.goal = () => ({back:true,title:'說說你的目標', body:`
-  <div class="explain nw" style="background:#fffaf2;color:#5c3a00">${NEW} 回答 3 個問題，說明適合先認識哪一類商品。這不是投資建議，也不會推薦個股。</div>
-  <div class="card"><h3>1. 你想用投資做什麼？</h3><div class="chips" style="margin-top:8px">${[['div','存股領息'],['grow','長期累積'],['unsure','還在摸索']].map(([k,t])=>`<button class="chip ${S.goal===k?'on':''}" data-act="set" data-k="goal" data-v="${k}">${t}</button>`).join('')}</div></div>
-  <div class="card"><h3>2. 每個月大概能投入多少？</h3><div class="chips" style="margin-top:8px">${[1000,3000,5000,10000].map(v=>`<button class="chip ${S.budget===v?'on':''}" data-act="set" data-k="budget" data-v="${v}">${fmt(v)} 元</button>`).join('')}</div></div>
-  <div class="card"><h3>3. 如果帳面跌了 10%，你會？</h3><div class="chips" style="margin-top:8px">${[['calm','照常，不太在意'],['worry','會擔心，但不會賣'],['sell','很想賣掉']].map(([k,t])=>`<button class="chip ${S.risk===k?'on':''}" data-act="set" data-k="risk" data-v="${k}">${t}</button>`).join('')}</div></div>
-  <button class="btn" data-go="goalResult" ${S.goal&&S.risk?'':'disabled'}>看看適合先認識什麼</button>`});
-SCR.goalResult = () => { const map={div:['高股息 ETF','每季或每半年配一次息，適合想要現金流的人。',['0056','00878']],grow:['市值型 ETF','跟著台灣大型公司整體成長，配息較少，適合長期放著。',['0050','006208']],unsure:['市值型 ETF','分散在 50 家大公司，很多人第一檔的選擇，可以先小額試試。',['006208','0050']]};
-  const [t,d,list]=map[S.goal||'unsure'];
-  return {back:true,title:'你可以先認識', body:`
-  <div class="card nw" style="background:#fffaf2"><span class="tiny">依你的目標${NEW}</span><h3 style="font-size:20px;margin-top:2px">${t}</h3><p class="sub" style="margin:0">${d}</p></div>
-  ${S.risk==='sell'?`<div class="warn">你提到跌 10% 會很想賣。可以先用定期定額小額開始，每月金額設在你完全不會用到的錢。</div>`:''}
-  ${qtable(list)}
-  <div class="explain">以上是商品類型的說明，不是買進建議。想知道差在哪，可以看 ETF 白話比較。</div>
-  <button class="btn" data-go="compare">看 ETF 白話比較</button>
-  <button class="btn ghost" data-act="openDca">直接設定定期定額（每月 ${fmt(S.budget)} 元）</button>`};
-};
-
-/* ----- 定期定額 ----- */
-SCR.dca = ({sym}) => { const d=S._dca||(S._dca={sym:sym||(S.dca&&S.dca.sym)||(S.goal==='div'?'0056':'006208'),amt:S.dca?S.dca.amt:S.budget,day:S.dca?S.dca.day:6});
-  if(sym) d.sym=sym; const x=P[d.sym];
-  return {back:true,title:'定期定額', body:`
-  <div class="tiny" style="text-align:center">既有功能・本專題在流程中加上白話說明與一句話確認</div>
-  <div class="explain">每月固定日子、固定金額自動買進，不用自己判斷時機。買到的是零股，金額會換算成股數。</div>
-  <div class="card"><h3>買哪一檔</h3><div class="chips" style="margin-top:8px">${['006208','0050','0056','00878'].map(s=>`<button class="chip ${d.sym===s?'on':''}" data-act="dset" data-k="sym" data-v="${s}">${s} ${P[s].name}</button>`).join('')}</div>
-    <div class="nw" style="margin-top:8px;border-radius:10px;background:#fffaf2;padding:6px 9px;font-size:12.5px">${x.type}・${x.one}・${x.freq}${NEW}</div></div>
-  <div class="card"><h3>每月金額</h3><div class="chips" style="margin-top:8px">${[1000,3000,5000,10000].map(v=>`<button class="chip ${d.amt===v?'on':''}" data-act="dset" data-k="amt" data-v="${v}">${fmt(v)} 元</button>`).join('')}</div>
-    <div class="tiny num" style="margin-top:6px">以現價示意，每月約可買 ${Math.floor(d.amt/x.price)} 股</div></div>
-  <div class="card"><h3>每月幾號扣款</h3><div class="seg" style="margin-top:8px">${[6,16,26].map(v=>`<button class="${d.day===v?'on':''}" data-act="dset" data-k="day" data-v="${v}">${v} 日</button>`).join('')}</div></div>
-  <div class="card nw" style="background:#fffaf2"><span class="tiny">一句話確認${NEW}</span><p style="margin:4px 0 0;font-size:15.5px;line-height:1.75">每月 <b>${d.day} 日</b>從交割帳戶扣 <b>${fmt(d.amt)} 元</b>，買進 <b>${x.name} ${d.sym}</b>。可以隨時暫停或修改。</p><p class="tiny" style="margin:4px 0 0">金額門檻、扣款日與手續費為示意，請以 App 實際規則為準。</p></div>
-  <button class="btn" data-act="saveDca">確認設定</button>
-  <button class="btn line" data-go="help">第一次設定，想找真人陪我看</button>`};
-};
-
-/* ----- 庫存延伸 ----- */
 SCR.why = () => { const tc=todayChange(); const parts=Object.keys(S.holdings).map(s=>[s,dayChg(s)]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
-  return {back:true,title:'今天為什麼變了？', body:`
+  return {back:true,title:'報酬怎麼看', body:`
   <div class="card nw" style="background:#fffaf2"><span class="sub">今日庫存變化（示意）${NEW}</span><div class="big num ${cls(tc)}">${tc>=0?'+':''}${fmt(tc)} 元</div></div>
-  <div class="card"><h3>變動來自哪裡</h3>${parts.map(([s,v])=>`<div class="li" style="cursor:default"><span class="mid"><b>${P[s].name}</b><span>今天 ${pctTxt(P[s].chg)}・占你資產 ${(hv(s)/total()*100).toFixed(0)}%</span></span><span class="num ${cls(v)}">${v>=0?'+':''}${fmt(v)}</span></div>`).join('')}</div>
-  <div class="explain">今天<b>大盤上漲約 2.5%</b>，你的市值型 ETF 跟著台股大型公司一起漲；兆豐金逆勢下跌，抵銷了一部分。一天的漲跌多半是市場整體波動，長期存股比較要注意的是公司或 ETF 本身有沒有變化。</div>
-  <div class="card"><h3>和你持股有關的消息（示意）</h3>
-    <div class="li" style="cursor:default"><span class="mid"><b>金控股本週陸續公布前三季獲利</b><span>與你持有的兆豐金有關・11/10</span></span></div>
-    <div class="li" style="cursor:default"><span class="mid"><b>0056 預計 1 月除息</b><span>除息當天股價會先扣掉股利，帳面看起來會跌・11/08</span></span></div></div>
-  <button class="btn ghost" data-act="ask" data-q="除息是什麼？">除息是什麼？問小幫手</button>`};
+  <div class="card"><h3>變動來自哪裡</h3>${parts.map(([s,v])=>`<button class="li" data-go="holding" data-sym="${s}"><span class="mid"><b>${P[s].name}</b><span>今天 ${pctTxt(P[s].chg)}・占你資產 ${(hv(s)/total()*100).toFixed(0)}%</span></span><span class="num ${cls(v)}">${v>=0?'+':''}${fmt(v)}</span></button>`).join('')}</div>
+  <div class="explain"><b>基本報酬</b>＝（現價 − 平均成本）× 股數。一天的漲跌多半是市場整體波動；今天大盤上漲約 2.5%，市值型 ETF 跟著漲，兆豐金逆勢下跌。除息當天股價會先扣掉股利，帳面看起來會變少。</div>
+  <button class="btn ghost" data-act="ask" data-q="除息是什麼？">除息是什麼？問小芽</button>`};
 };
-SCR.alloc = () => { const tot=total(); const overs=Object.keys(S.holdings).filter(s=>!P[s].etf&&hv(s)/tot*100>S.limit);
-  return {back:true,title:'我的配置', body:`
-  <div class="card nw" style="background:#fffaf2"><h3>依類型分配${NEW}</h3>${allocBar(tot)}</div>
-  <div class="card nw" style="background:#fffaf2"><div class="row"><h3>單一個股上限${NEW}</h3><div class="stepper" style="width:140px;height:40px"><button data-act="limit" data-d="-5">−</button><span class="v">${S.limit}%</span><button data-act="limit" data-d="5">＋</button></div></div>
-    ${overs.length?overs.map(s=>`<div class="warn" style="margin-top:8px">${P[s].name}占你資產 <b>${(hv(s)/tot*100).toFixed(0)}%</b>，超過你設定的 ${S.limit}%。下次在下單頁買進時會再提醒你。</div>`).join(''):`<div class="ok" style="margin-top:8px">目前沒有個股超過 ${S.limit}%。</div>`}
-    <p class="tiny" style="margin:6px 0 0">ETF 本身已分散，不列入單一個股上限。</p></div>
-  <div class="card nw" style="background:#fffaf2"><h3>提醒規則${NEW}</h3>
-    <div class="row" style="padding:6px 0"><span>持股跌超過 10%，提醒我檢視</span><button class="sw ${S.rules.drop?'on':''}" data-act="rule" data-k="drop"></button></div>
-    <div class="row" style="padding:6px 0"><span>每季提醒我回顧一次</span><button class="sw ${S.rules.quarter?'on':''}" data-act="rule" data-k="quarter"></button></div>
-    <div class="row" style="padding:6px 0"><span>推播只在</span><div class="seg" style="width:150px">${['盤前','盤後'].map(v=>`<button class="${S.rules.time===v?'on':''}" data-act="rtime" data-v="${v}">${v}</button>`).join('')}</div></div>
-    <p class="tiny" style="margin:4px 0 0">現有「警示設定」可設到價提醒；這裡加上以資產配置為主的提醒。</p></div>`};
-};
-SCR.review = () => ({back:true,title:'交易回顧', body:`
-  <div class="explain nw" style="background:#fffaf2;color:#5c3a00">${NEW} 把「當時為什麼買」和「後來結果」放在一起，檢查自己有沒有被情緒帶著走。理由與心情來自下單頁的選填欄位。</div>
-  ${S.trades.map(t=>{const x=P[t.sym], r=(x.price-t.price)/t.price*100;
-   return `<div class="card"><div class="row"><b>${t.side} ${x.name} ${t.sym}</b><span class="tiny">${t.d}</span></div><span class="sub num">${fmt(t.qty)} 股 @ ${t.price}</span>
-     <div class="chips" style="margin:6px 0">${t.reason?`<span class="pill">理由：${t.reason}</span>`:'<span class="pill w">沒有記理由</span>'}${t.mood?`<span class="pill w">心情：${t.mood}</span>`:''}</div>
-     <span class="num ${cls(r)}" style="font-size:13.5px">${t.side==='賣'?`賣出後股價 ${r>=0?'上漲':'下跌'} ${Math.abs(r).toFixed(1)}%`:`到今天 ${pctTxt(r)}`}</span></div>`}).join('')}
-  <div class="card nw" style="background:#fffaf2"><h3>這季小結（示意）</h3><p class="sub" style="margin:4px 0 0">${S.trades.length} 筆交易中，有 ${S.trades.filter(t=>t.mood==='怕錯過'||t.mood==='有點緊張').length} 筆是在「怕錯過」或「緊張」時下的。下次遇到這種心情，可以先加入自選，隔天再決定。</p></div>`});
 
-/* ----- 服務、學習（多鄰國式學習路徑） ----- */
-SCR.service = () => { const all=ALL.filter(l=>!l.soon), n=all.filter(l=>S.done.includes(l.id)).length; const nl=nextLesson();
-  return {top:`<div class="ptitle"><h2>服務</h2></div>`, body:`
-  <button class="card nw" style="background:#fffaf2;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;gap:12px;align-items:center" data-go="learn">${sprout(58,'happy')}<span style="flex:1"><span class="row"><b style="font-size:15.5px">🎓 新手學堂${NEW}</b><span class="pill w">🔥 ${S.streak} 天</span></span><span class="prog" style="display:block;margin:8px 0 4px"><i style="width:${n/all.length*100}%"></i></span><span class="tiny">${n}/${all.length} 關・${nl?'下一關：'+nl.t:'全部完成'}</span></span></button>
+/* ----- 定期定額：照現有流程，介面清楚，設定後接上首次扣款結果 ----- */
+const DCA_ETF=['0050','0056','00878','006208'];
+function nextDate(day){ return day>16?`11/${day}`:`12/${day}`; }
+SCR.dca = ({sym}) => { const d=S._dca||(S._dca={sym:sym||'0050',amt:3000,day:6}); if(sym) d.sym=sym; const x=P[d.sym];
+  return {back:true,title:'定期定額', body:`
+  <div class="card"><h3>1. 買哪一檔</h3><div class="chips" style="margin-top:8px">${DCA_ETF.map(s=>`<button class="chip ${d.sym===s?'on':''}" data-act="dset" data-k="sym" data-v="${s}">${s} ${P[s].name}</button>`).join('')}</div>
+    ${S.guide?`<div class="tiny" style="margin-top:6px">${x.type}・${x.one}</div>`:''}<div class="tiny">可選標的以 App 實際提供為準</div></div>
+  <div class="card"><h3>2. 每次扣多少</h3><div class="chips" style="margin-top:8px">${[1000,3000,5000,10000].map(v=>`<button class="chip ${d.amt===v?'on':''}" data-act="dset" data-k="amt" data-v="${v}">${fmt(v)} 元</button>`).join('')}</div>
+    <div class="tiny num" style="margin-top:6px">以今日價格示意，每次約可買 ${Math.floor(d.amt/x.price)} 股</div></div>
+  <div class="card"><h3>3. 每月幾號扣款</h3><select class="sel" style="margin-top:8px;width:100%" data-dcaday aria-label="扣款日">${Array.from({length:28},(_,i)=>i+1).map(v=>`<option value="${v}" ${d.day===v?'selected':''}>每月 ${v} 日</option>`).join('')}</select>
+    ${S.guide?`<div class="tiny" style="margin-top:6px">可以配合發薪日；遇到假日順延到下一個營業日。</div>`:''}</div>
+  <div class="card nw" style="background:#fffaf2"><span class="tiny">送出前確認 ${NEW}</span><p style="margin:4px 0 0;font-size:15.5px;line-height:1.75">每月 <b>${d.day} 日</b>從交割帳戶扣 <b>${fmt(d.amt)} 元</b>，買進 <b>${x.name} ${d.sym}</b>。第一次預計在 <b>${nextDate(d.day)}</b> 扣款。可以隨時暫停或修改。</p></div>
+  <button class="btn" data-act="saveDca">確認設定</button>`};
+};
+SCR.dcaDone = () => { const d=S.dcas[S.dcas.length-1], x=P[d.sym];
+  return {back:false,title:'設定完成', body:`
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center">${sprout(90,'cheer')}<h2 style="margin:0;font-size:22px">定期定額設定完成</h2><span class="sub">${x.name} ${d.sym}・每月 ${d.day} 日・${fmt(d.amt)} 元</span></div>
+  <div class="card nw" style="background:#fffaf2"><h3>接下來會發生什麼 ${NEW}</h3>
+    <div class="tl" style="margin-top:8px">
+      <div class="s now"><span class="dot">1</span><span><b>第一次扣款：${d.first}</b><br><span class="sub">從交割帳戶扣 ${fmt(d.amt)} 元，請在前一個營業日留足金額</span></span></div>
+      <div class="s"><span class="dot">2</span><span><b>自動買進</b><br><span class="sub">以當天價格換算股數，約 ${Math.floor(d.amt/x.price)} 股（示意）</span></span></div>
+      <div class="s"><span class="dot">3</span><span><b>看結果</b><br><span class="sub">交易 → 委託 → 定期定額明細；買到的股數也會出現在庫存</span></span></div></div></div>
+  <button class="btn" data-go="dcaDetail">看定期定額明細</button>
+  <button class="btn line" data-act="tab" data-id="home">回首頁</button>`};
+};
+SCR.dcaDetail = () => ({back:true,title:'定期定額明細', body:`
+  ${S.dcas.length?S.dcas.map((d,i)=>{const x=P[d.sym]; return `<div class="card"><div class="row"><b>${x.name} ${d.sym}</b><span class="pill ${d.status==='done'?'g':'w'}">${d.status==='done'?'已買進':'待扣款'}</span></div>
+   <div class="kv" style="margin-top:6px"><span class="k">每次金額</span><span>${fmt(d.amt)} 元</span><span class="k">扣款日</span><span>每月 ${d.day} 日</span><span class="k">首次扣款</span><span>${d.first}</span>${d.status==='done'?`<span class="k">首次買進結果</span><span>買到 ${d.got} 股・均價 ${x.price.toFixed(2)}</span>`:''}</div>
+   ${d.status==='done'?'<button class="btn sm ghost" style="margin-top:8px" data-act="tradeSub" data-v="inv">到庫存查看</button>':`<button class="btn sm ghost" style="margin-top:8px" data-act="dcaRun" data-i="${i}">（原型操作）模擬首次扣款</button>`}</div>`}).join(''):'<div class="card" style="text-align:center;padding:30px"><span class="sub">還沒有定期定額</span></div>'}
+  <p class="tiny" style="text-align:center">完整扣款總覽、日記沿用 App 現有功能</p>`});
+
+/* ----- 服務：偏好設定（新手輔助開關） ----- */
+SCR.service = () => ({top:`<div class="ptitle"><h2>服務</h2></div>`, body:`
   <div class="sec">交易服務</div>
   <div class="svcgrid">${[['🐷','定期定額','openDca'],['🗳️','抽籤/競拍'],['📋','委託查詢','orders'],['🔔','警示設定'],['🔁','雙向借券'],['💳','股票借貸'],['🏦','CMA/銀行'],['📄','帳務查詢']].map(([i,t,a])=>`<button class="tile" ${a==='openDca'?'data-act="openDca"':a==='orders'?'data-act="tradeSub" data-v="orders"':`data-act="toast" data-t="${t}（原型未製作）"`}><span class="ic">${i}</span>${t}</button>`).join('')}</div>
+  <div class="sec">偏好設定</div>
+  <div class="card nw" style="background:#fffaf2">
+    <div class="prefrow"><span><b>新手輔助 ${NEW}</b><br><span class="sub">名詞解釋、操作提示、小芽情境求助。關閉後會收起教學與主動提示，但股數、金額、費用和必要提醒會保留。</span></span><button class="sw ${S.guide?'on':''}" data-act="guide" aria-label="新手輔助開關"></button></div>
+    <div class="prefrow"><span><b>學習提醒</b><br><span class="sub">每天盤後 20:00 提醒一次</span></span><button class="sw ${S.remind?'on':''}" data-act="remind" aria-label="學習提醒開關"></button></div></div>
   <div class="sec">協助</div>
-  <div class="svcgrid"><button class="tile" data-act="toast" data-t="線上客服（現有功能）"><span class="ic">🎧</span>線上客服</button><button class="tile nw" data-go="help"><span class="badge">新增</span><span class="ic">👥</span>新手<br>工作坊</button><button class="tile nw" data-act="openAI"><span class="badge">新增</span><span class="ic">💬</span>AI<br>小幫手</button></div>`};
-};
+  <div class="svcgrid"><button class="tile" data-act="toast" data-t="線上客服（現有功能）"><span class="ic">🎧</span>線上客服</button></div>`});
+SCR.help = () => ({back:true,title:'客服與協助', body:`
+  <div class="card"><h3>線上客服</h3><p class="sub" style="margin:2px 0 0">現有功能，處理帳務、開戶與系統問題。</p></div>
+  ${S.guide?`<button class="card nw" style="background:#fffaf2;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;gap:10px;align-items:center" data-act="openAI">${sprout(44,'happy')}<span><b>問小芽 ${NEW}</b><br><span class="sub">看不懂名詞或操作，在當下頁面就能問</span></span></button>`:''}`});
 
-/* 原創陪伴角色「小芽」：從存錢硬幣裡長出的小芽，呼應存股慢慢長大 */
-function sprout(sz,mood='happy'){
-  const eyes = mood==='cheer'
-    ? '<path d="M33 64 q5 -6 10 0" stroke="#3a2a1a" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M57 64 q5 -6 10 0" stroke="#3a2a1a" stroke-width="3.2" fill="none" stroke-linecap="round"/>'
-    : mood==='think'
-    ? '<circle cx="39" cy="63" r="4.5" fill="#3a2a1a"/><circle cx="62" cy="63" r="4.5" fill="#3a2a1a"/><circle cx="40.5" cy="61.5" r="1.4" fill="#fff"/><circle cx="63.5" cy="61.5" r="1.4" fill="#fff"/>'
-    : mood==='oops'
-    ? '<path d="M34 61 l9 4 M34 65 l9 -4" stroke="#3a2a1a" stroke-width="3" stroke-linecap="round"/><circle cx="62" cy="64" r="4.5" fill="#3a2a1a"/>'
-    : '<circle cx="39" cy="64" r="5" fill="#3a2a1a"/><circle cx="61" cy="64" r="5" fill="#3a2a1a"/><circle cx="40.6" cy="62.3" r="1.6" fill="#fff"/><circle cx="62.6" cy="62.3" r="1.6" fill="#fff"/>';
-  const mouth = mood==='cheer' ? '<path d="M40 76 Q50 92 60 76 Z" fill="#8a3b1f"/><path d="M44 81 Q50 86 56 81" fill="#e86b5a"/>'
-    : mood==='think' ? '<ellipse cx="50" cy="79" rx="3.6" ry="3" fill="#8a3b1f"/>'
-    : mood==='oops' ? '<path d="M42 80 Q50 75 58 80" stroke="#8a3b1f" stroke-width="3" fill="none" stroke-linecap="round"/>'
-    : '<path d="M41 76 Q50 85 59 76" stroke="#8a3b1f" stroke-width="3.2" fill="none" stroke-linecap="round"/>';
-  const arms = mood==='cheer' ? '<path d="M17 66 L6 50" stroke="#e0a024" stroke-width="7" stroke-linecap="round"/><path d="M83 66 L94 50" stroke="#e0a024" stroke-width="7" stroke-linecap="round"/><path d="M4 40 l3 6 l6 -1 l-5 4 l2 6 l-5 -4 l-5 3 l2 -6 l-5 -4 l6 1z" fill="#ffd34d"/>' : '';
-  return `<svg viewBox="0 0 100 110" width="${sz}" height="${Math.round(sz*1.1)}" aria-label="陪伴角色小芽" role="img" style="flex:none;overflow:visible">
-  ${arms}
-  <path d="M50 34 C46 24 47 18 50 12" stroke="#3f9a5c" stroke-width="5" fill="none" stroke-linecap="round"/>
-  <path d="M50 18 C38 2 18 6 16 18 C28 28 42 26 50 18Z" fill="#4fae6c"/>
-  <path d="M50 16 C62 -2 86 2 88 14 C76 26 60 26 50 16Z" fill="#66c283"/>
-  <ellipse cx="50" cy="70" rx="35" ry="33" fill="#f2b73a"/>
-  <ellipse cx="50" cy="70" rx="27" ry="25.5" fill="none" stroke="#e09d1f" stroke-width="2.5"/>
-  <ellipse cx="50" cy="82" rx="18" ry="12" fill="#f9d27a"/>
-  ${eyes}
-  <circle cx="30" cy="74" r="4.5" fill="#f59a85" opacity=".75"/><circle cx="70" cy="74" r="4.5" fill="#f59a85" opacity=".75"/>
-  ${mouth}
-</svg>`;
-}
-function say(text,mood){ return `<div class="say">${sprout(64,mood)}<div class="bubble">${text}</div></div>`; }
-
+/* ----- 體驗區：新手學堂（多鄰國式） ----- */
 const UNITS=[
-{id:'u1',title:'看懂下單',sub:'張與股、零股、限價市價、委託',color:'#306bb7',lessons:[
+{id:'u1',title:'ETF 入門',sub:'先上一組短課，學完就能比較兩檔 ETF',color:'#2f8f5c',lessons:[
+ {id:'e1',t:'ETF 是一籃子股票',ex:[
+  {type:'card',h:'買一檔，等於買一籃',p:'ETF 把很多公司放在同一個籃子裡。買 1 股 0050，就同時持有台灣市值最大的 50 家公司的一小部分。'},
+  {type:'choice',q:'買 ETF 最大的好處是？',opts:['保證賺錢','一次分散到很多公司','不用付手續費'],a:1,why:'ETF 幫你分散，但不保證獲利。'},
+  {type:'match',q:'把 ETF 和特色配對',pairs:[['0050','市值型'],['0056','高股息'],['市值型','跟著大公司成長'],['高股息','重視配息']]}]},
+ {id:'e2',t:'市值型和高股息',ex:[
+  {type:'card',h:'先問自己要什麼',p:'想跟著台灣大公司長期成長，可以先認識市值型；想定期有現金流，可以先認識高股息。'},
+  {type:'choice',q:'想每季都有一筆現金流，比較適合先認識哪一類？',opts:['市值型 ETF','高股息 ETF','都一樣'],a:1,why:'高股息 ETF 多為季配息。'}]},
+ {id:'e3',t:'看懂 ETF 標示卡',ex:[
+  {type:'card',h:'像看食品營養標示一樣',p:'每檔 ETF 的標示卡都有：怎麼選股、前五大持股與占比、主要風險、幾月配息、上次配多少、殖利率。'},
+  {type:'choice',q:'0050 第一大持股台積電占約 58%，代表什麼？',opts:['持股很平均','台積電漲跌對它影響很大','它不會跌'],a:1,why:'占比越高，那家公司對 ETF 的影響越大。'},
+  {type:'fill',q:'把句子完成',parts:['殖利率 ＝ 一年配息 ÷ ',''],bank:['股價','股數'],a:'股價',why:'例如股價 100 元、一年配 5 元，殖利率就是 5%。'}],cta:['實戰任務：比較兩檔 ETF','go','compare']}
+]},
+{id:'u2',title:'看懂下單',sub:'張與股、零股、限價市價、委託',color:'#306bb7',lessons:[
  {id:'l1',t:'張和股',ex:[
   {type:'card',h:'1 張 = 1,000 股',p:'整股的單位是「張」，零股的單位是「股」。下單頁寫「單位：1000股」，代表數量 1 就是 1,000 股。'},
   {type:'choice',q:'整股下單，數量填 1，你會買到幾股？',opts:['1 股','100 股','1,000 股'],a:2,why:'整股數量 1 就是 1 張，也就是 1,000 股。'},
-  {type:'fill',q:'把句子完成',parts:['數量填 3 張，等於 ',' 股。'],bank:['3','300','3,000'],a:'3,000',why:'3 張 × 1,000 股 = 3,000 股。'},
-  {type:'choice',q:'每股 36 元，買 1 張大約要多少錢？',opts:['36 元','3,600 元','36,000 元'],a:2,why:'36 元 × 1,000 股 ≈ 36,000 元，還要加手續費。'}]},
+  {type:'fill',q:'把句子完成',parts:['數量填 3 張，等於 ',' 股。'],bank:['3','300','3,000'],a:'3,000',why:'3 張 × 1,000 股 = 3,000 股。'}]},
  {id:'l2',t:'整股與零股',ex:[
   {type:'card',h:'預算不多，就用零股',p:'零股可以 1 股、1 股買。盤中零股 9:00–13:30 下單，約每分鐘撮合；盤後零股 13:40–14:30 下單，14:30 一次撮合。'},
-  {type:'match',q:'把名詞和說明配對',pairs:[['整股','單位是張'],['盤中零股','9:00–13:30'],['盤後零股','14:30 撮合'],['零股','可以買 1 股']]},
-  {type:'choice',q:'小美有 5,000 元，想買每股約 99 元的 0050，可以怎麼買？',opts:['整股 1 張','盤中零股 50 股','買不了'],a:1,why:'50 股 × 99 元 ≈ 4,950 元，用零股就買得到。'}]},
+  {type:'match',q:'把名詞和說明配對',pairs:[['整股','單位是張'],['盤中零股','9:00–13:30'],['盤後零股','14:30 撮合'],['零股','可以買 1 股']]}]},
  {id:'l3',t:'限價與市價',ex:[
-  {type:'card',h:'限價：最多願意付多少',p:'下單頁的價格欄就是限價。市場價格比它高就不會成交，不會買貴，但可能買不到。市價則是照當下價格馬上成交。'},
-  {type:'choice',q:'你用限價 36.00 買進，賣方最低賣 36.20，會怎樣？',opts:['馬上以 36.20 成交','先排隊，等有人願意賣 36.00','系統自動幫你改價'],a:1,why:'限價代表最多付 36.00，價格沒到就排隊等。'},
-  {type:'fill',q:'把句子完成',parts:['零股只能用 ',' 下單。'],bank:['市價','限價'],a:'限價',why:'零股交易只接受限價委託。'}]},
+  {type:'card',h:'限價：最多願意付多少',p:'下單頁的價格欄就是限價。市場價格比它高就不會成交，不會買貴，但可能買不到。'},
+  {type:'choice',q:'你用限價 36.00 買進，賣方最低賣 36.20，會怎樣？',opts:['馬上以 36.20 成交','先排隊，等有人願意賣 36.00','系統自動幫你改價'],a:1,why:'限價代表最多付 36.00，價格沒到就排隊等。'}]},
  {id:'l4',t:'委託、成交、取消',ex:[
-  {type:'card',h:'送出不等於買到',p:'按下送出是「委託」，代表在排隊；有人用你的價格賣給你才「成交」，兩個交易日後扣款。沒成交前都可以取消。'},
-  {type:'match',q:'把狀態和意思配對',pairs:[['委託中','還在排隊'],['已成交','真的買到了'],['已取消','不會扣款'],['T+2','兩天後扣款']]},
-  {type:'choice',q:'看到「委託中」，現在可以做什麼？',opts:['什麼都不能做','取消這筆委託','要求退款'],a:1,why:'還沒成交前，可以到「交易 → 委託」取消。'}]},
- {id:'u1t',t:'單元挑戰：試下一筆零股',boss:true,ex:[
+  {type:'card',h:'送出不等於買到',p:'送出是「委託」，在排隊；有人用你的價格賣給你才「成交」，兩個交易日後扣款。沒成交前都可以取消。'},
+  {type:'match',q:'把狀態和意思配對',pairs:[['委託中','還在排隊'],['已成交','真的買到了'],['已取消','不會扣款'],['T+2','兩天後扣款']]}]},
+ {id:'u2t',t:'單元挑戰：試下一筆零股',boss:true,ex:[
   {type:'sim',q:'用大約 1 萬元買 0056（每股約 36.2 元），試著下這筆單',why:'切到「零股」，數量約 250–276 股，金額就會落在 1 萬元以內。'},
-  {type:'choice',q:'這筆送出後顯示「委託中」，代表？',opts:['已經扣款','還在排隊，可以取消','買太多了'],a:1,why:'委託中＝排隊等成交。'}],cta:['實戰任務：到下單頁試算一次','buy','0056']}
+  {type:'choice',q:'送出後顯示「委託中」，代表？',opts:['已經扣款','還在排隊，可以取消','買太多了'],a:1,why:'委託中＝排隊等成交。'}],cta:['實戰任務：到下單頁試算一次','buy','0056']}
 ]},
-{id:'u2',title:'ETF 與定期定額',sub:'一籃子股票、市值型與高股息、自動扣款',color:'#2f8f5c',lessons:[
- {id:'l5',t:'ETF 是一籃子股票',ex:[
-  {type:'card',h:'買一檔，等於買一籃',p:'ETF 把很多公司放在同一個籃子裡。買 1 股 0050，就同時持有台灣市值最大的 50 家公司的一小部分。'},
-  {type:'choice',q:'買 ETF 最大的好處是？',opts:['保證賺錢','一次分散到很多公司','不用付手續費'],a:1,why:'ETF 幫你分散，但不保證獲利。'}]},
- {id:'l6',t:'市值型和高股息',ex:[
-  {type:'match',q:'把 ETF 和特色配對',pairs:[['0050','市值型'],['0056','高股息'],['市值型','跟著大公司成長'],['高股息','重視配息']]},
-  {type:'choice',q:'想每季都有一筆現金流，比較適合先認識哪一類？',opts:['市值型 ETF','高股息 ETF','都一樣'],a:1,why:'高股息 ETF 多為季配息。'}],cta:['實戰任務：看 ETF 白話比較','go','compare']},
- {id:'l7',t:'定期定額',ex:[
-  {type:'card',h:'固定日子、固定金額',p:'每月固定扣款買進，價格高時買得少、低時買得多，不用自己挑時機。首頁常用功能第一個就是定期定額。'},
-  {type:'choice',q:'定期定額的好處是？',opts:['保證獲利','不用自己挑進場時機','手續費全免'],a:1,why:'它分散買進時間，但不能保證獲利。'}],cta:['實戰任務：設定我的定期定額','dca','']}
-]},
-{id:'u3',title:'看懂庫存與報酬',sub:'報酬變化、除息、占比',color:'#c8620e',lessons:[
- {id:'l8',t:'報酬為什麼會變',ex:[
-  {type:'card',h:'先看大盤',p:'市值型 ETF 會跟著大盤漲跌，一天的變化多半是市場整體波動。除息那天股價會先扣掉股利。'},
-  {type:'choice',q:'除息當天帳面變少，股利去哪了？',opts:['消失了','之後匯進你的帳戶','被手續費扣掉'],a:1,why:'股利會在發放日匯入帳戶。'}],cta:['實戰任務：看今天庫存為什麼變了','go','why']},
- {id:'l9',t:'別把雞蛋放同一籃',ex:[
-  {type:'card',h:'單一個股占比',p:'一檔個股占資產太多，它一跌你就很痛。可以在「我的配置」設定上限，買進時系統會提醒。'},
-  {type:'fill',q:'兆豐金占資產 29%，我設定的上限是 20%',parts:['它已經 ',' 上限，該檢視一下。'],bank:['低於','超過'],a:'超過',why:'超過自己設定的上限，就是該檢視的訊號。'}],cta:['實戰任務：看我的配置','go','alloc']}
-]},
-{id:'u4',title:'三大價值投資門派',sub:'進階：選一個你認同的方法',color:'#6b4fa8',lessons:[
- {id:'a1',t:'艾蜜莉派：紅綠燈估價',ex:[
-  {type:'card',h:'把股票當收租的房子',p:'每年股利就是租金。15 年回本算便宜，20 年合理，30 年太貴。便宜價 = 股利 × 15。'},
-  {type:'fill',q:'每年穩定配 2 元的股票',parts:['便宜價是 ',' 元。'],bank:['20','30','40'],a:'30',why:'2 × 15 = 30 元。'}],cta:['實戰任務：設定到價提醒（示意）','toast','已建立到價提醒（示意）']},
- {id:'a2',t:'大俠武林派：股息現金流',soon:true,ex:[]},
- {id:'a3',t:'孫慶龍派：四季循環',soon:true,ex:[]}
+{id:'u3',title:'持有之後',sub:'報酬怎麼算、寫下並回顧理由',color:'#c8620e',lessons:[
+ {id:'h1',t:'報酬怎麼算',ex:[
+  {type:'card',h:'先看基本報酬',p:'基本報酬 ＝（現價 − 平均成本）× 股數。除息那天股價會先扣掉股利，帳面看起來會變少。'},
+  {type:'choice',q:'除息當天帳面變少，股利去哪了？',opts:['消失了','之後匯進你的帳戶','被手續費扣掉'],a:1,why:'股利會在發放日匯入帳戶。'}],cta:['實戰任務：看報酬怎麼變','go','why']},
+ {id:'h2',t:'寫下理由，之後回顧',ex:[
+  {type:'card',h:'給未來的自己留一句話',p:'下單時選一個理由，或自己寫。持有後回到庫存，就能對照當初的想法，看看有沒有被情緒帶著走。'},
+  {type:'choice',q:'寫下買進理由，最大的用處是？',opts:['讓系統推薦股票','之後回顧，檢查自己的決定','可以少付手續費'],a:1,why:'理由是給自己回顧用的。'}],cta:['實戰任務：到庫存看理由','inv','']}
 ]}];
 const ALL=UNITS.flatMap(u=>u.lessons.map((l,i)=>Object.assign(l,{unit:u,idx:i})));
 function findL(id){ return ALL.find(l=>l.id===id); }
 function nextLesson(){ return ALL.find(l=>!l.soon&&!S.done.includes(l.id)); }
-function ring(v,max,sz=44){ const r=sz/2-4, c=2*Math.PI*r, p=Math.min(1,v/max); return `<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}" aria-label="每日目標 ${v}/${max} XP" role="img"><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="rgba(0,0,0,.1)" stroke-width="5"/><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="#e8952a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c*p} ${c}" transform="rotate(-90 ${sz/2} ${sz/2})"/></svg>`; }
 
 SCR.learn = () => { const nl=nextLesson(); const offs=[0,52,72,52,0,-52,-72,-52]; let k=0;
   const stat=`<div class="lstat"><span title="連續天數">🔥 <b>${S.streak}</b></span><span title="經驗值">⭐ <b>${S.xp}</b> XP</span><span class="lgoal">${ring(S.today,S.goal,34)}<span><b>${S.today}/${S.goal}</b> XP<br><span class="tiny">每日目標</span></span></span></div><button class="rwbar" data-go="rewards"><span>🎟️ 手續費抵用金 <b>${fmt(S.credit)}</b> 元</span><span>學習點 <b>${S.pts}</b>/100 ›</span></button>`;
   const units=UNITS.map((u,ui)=>{
     const nodes=u.lessons.map((l,li)=>{ const done=S.done.includes(l.id), isCur=nl&&nl.id===l.id, lock=!done&&!isCur; const off=offs[k++%offs.length];
-      const ic = l.soon?'⏳':done?'✓':l.boss?'🏆':isCur?'★':'🔒';
+      const ic=done?'✓':l.boss?'🏆':isCur?'★':'🔒';
       const node=`<div class="nwrap" style="transform:translateX(${off}px)">${isCur?`<div class="startTip">開始</div>`:''}<button class="node ${done?'done':''} ${isCur?'cur':''} ${lock?'lock':''} ${l.boss?'boss':''}" style="--uc:${u.color}" data-act="node" data-id="${l.id}" aria-label="${l.t}${done?'（已完成）':lock?'（未解鎖）':''}">${ic}</button><span class="nlab">${l.t}</span></div>`;
       const chest = li===1 ? `<div class="nwrap" style="transform:translateX(${offs[k++%offs.length]}px)"><button class="chest ${done?'open':''}" data-act="chest" data-id="${u.id}" data-open="${done?1:0}" aria-label="寶箱">${S.chests.includes(u.id)?'✨':done?'🎁':'🧰'}</button></div>` : '';
-      const mascot = (li===2 && ui===0) ? `<div class="pmascot" style="${off>0?'left:6px':'right:6px'}">${sprout(70,isCur||done?'happy':'think')}</div>` : '';
+      const mascot = (li===1 && ui===0) ? `<div class="pmascot" style="${off>0?'left:6px':'right:6px'}">${sprout(66,isCur||done?'happy':'think')}</div>` : '';
       return node+chest+mascot; }).join('');
-    return `<div class="ubanner" style="background:${u.color}"><span><span class="tiny" style="color:rgba(255,255,255,.8)">單元 ${ui+1}</span><br><b>${u.title}</b><br><span style="font-size:12.5px;opacity:.9">${u.sub}</span></span><button class="ugbtn" data-act="toast" data-t="單元指南：先看重點，再開始練習（示意）">📖 指南</button></div><div class="lpath">${nodes}</div>`; }).join('');
-  return {back:true,title:'新手學堂', body:`<div class="nw" style="border-radius:16px;padding:10px;background:#fffaf2;display:flex;flex-direction:column;gap:12px">
-  <div class="tiny" style="text-align:right">${NEW}</div>
-  ${stat}
-  ${units}
-  <div class="tiny" style="text-align:center;padding:6px 0">推播只在盤後提醒一次・每關 1–2 分鐘・可以隨時離開</div></div>
-  <button class="card" style="text-align:left;cursor:pointer;font:inherit;color:inherit" data-go="help"><b>想找真人？</b><br><span class="sub">新手小班工作坊・首次設定真人陪看</span></button>`};
+    return `<div class="ubanner" style="background:${u.color}"><span><span class="tiny" style="color:rgba(255,255,255,.85)">單元 ${ui+1}</span><br><b>${u.title}</b><br><span style="font-size:12.5px;opacity:.9">${u.sub}</span></span><button class="ugbtn" data-act="toast" data-t="單元指南：先看重點，再開始練習（示意）">📖 指南</button></div><div class="lpath">${nodes}</div>`; }).join('');
+  return {back:true,title:'體驗區・新手學堂', body:`<div class="nw" style="border-radius:16px;padding:10px;background:#fffaf2;display:flex;flex-direction:column;gap:12px"><div class="tiny" style="text-align:right">${NEW}</div>${stat}${units}<div class="tiny" style="text-align:center;padding:6px 0">每關 1–2 分鐘・可以隨時離開・提醒時段可在「服務 → 偏好設定」調整</div></div>`};
 };
-
 function shuffleIdx(n,seed){ const a=[...Array(n).keys()]; let s=seed; for(let i=n-1;i>0;i--){ s=(s*9301+49297)%233280; const j=Math.floor(s/233280*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-function startLesson(id){ const l=findL(id); if(!l||l.soon){ toast('即將推出'); return; }
-  S.lesson={id, queue:l.ex.map((_,i)=>i), pos:0, mistakes:0, correct:0, start:Date.now()}; resetEx(); go('lesson'); }
-function resetEx(){ const L=S.lesson, l=findL(L.id), ex=l.ex[L.queue[L.pos]]; L.sel=null; L.checked=false; L.right=null; L.fill=null; L.matched=[]; L.pickL=null; L.flash=null; L.sim={lot:'整股',qty:1};
-  if(ex&&ex.type==='match') L.rOrder=shuffleIdx(ex.pairs.length, L.pos*7+3); }
-function curEx(){ const L=S.lesson, l=findL(L.id); return l.ex[L.queue[L.pos]]; }
-function simCalc(){ const s=S.lesson.sim, sh=s.lot==='整股'?s.qty*1000:s.qty; return {sh, amt:Math.round(sh*36.2)}; }
-
-SCR.lesson = () => { const L=S.lesson, l=findL(L.id), ex=curEx(); const graded=l.ex.filter(e=>e.type!=='card').length;
-  const pct = Math.round(Math.min(L.pos, L.queue.length)/L.queue.length*100);
+function startLesson(id){ const l=findL(id); if(!l){ toast('即將推出'); return; } S.lesson={id,queue:l.ex.map((_,i)=>i),pos:0,mistakes:0,correct:0,start:Date.now()}; resetEx(); go('lesson'); }
+function resetEx(){ const L=S.lesson, ex=findL(L.id).ex[L.queue[L.pos]]; Object.assign(L,{sel:null,checked:false,right:null,fill:null,matched:[],pickL:null,flash:null,sim:{lot:'整股',qty:1}}); if(ex&&ex.type==='match') L.rOrder=shuffleIdx(ex.pairs.length,L.pos*7+3); }
+function curEx(){ const L=S.lesson; return findL(L.id).ex[L.queue[L.pos]]; }
+function simCalc(){ const s=S.lesson.sim, sh=s.lot==='整股'?s.qty*1000:s.qty; return {sh,amt:Math.round(sh*36.2)}; }
+SCR.lesson = () => { const L=S.lesson, l=findL(L.id), ex=curEx(); const pct=Math.round(Math.min(L.pos,L.queue.length)/L.queue.length*100);
   const top=`<div class="lhead"><button class="lx" data-act="lquit" aria-label="離開關卡">✕</button><div class="lbar"><i style="width:${pct}%"></i></div><span class="tiny">${l.unit.title}</span></div>`;
-  let body='', canCheck=false;
-  if(ex.type==='card'){ body=say('先看一個重點','happy')+`<div class="tcard"><span class="pill w" style="align-self:flex-start">重點卡</span><h3>${ex.h}</h3><p>${ex.p}</p></div>`; }
-  else if(ex.type==='choice'){ body=say(ex.q,'think')+`<div class="optlist">${ex.opts.map((o,i)=>`<button class="dopt ${L.sel===i?'sel':''} ${L.checked&&i===ex.a?'right':''} ${L.checked&&L.sel===i&&i!==ex.a?'wrong':''}" data-act="lsel" data-i="${i}" ${L.checked?'disabled':''}><span class="k">${i+1}</span>${o}</button>`).join('')}</div>`; canCheck=L.sel!=null; }
-  else if(ex.type==='fill'){ body=say(ex.q,'think')+`<div class="fillline">${ex.parts[0]}<button class="blank ${L.fill?'filled':''} ${L.checked?(L.right?'right':'wrong'):''}" data-act="fclear" ${L.checked?'disabled':''}>${L.fill||'　　　'}</button>${ex.parts[1]}</div><div class="bank">${ex.bank.map(w=>`<button class="wchip ${L.fill===w?'used':''}" data-act="fpick" data-v="${w}" ${L.checked||L.fill===w?'disabled':''}>${w}</button>`).join('')}</div>`; canCheck=!!L.fill; }
-  else if(ex.type==='match'){ const R=L.rOrder; body=say(ex.q,'think')+`<div class="mgrid"><div class="mcol">${ex.pairs.map((p,i)=>`<button class="mbtn ${L.matched.includes(i)?'ok':''} ${L.pickL===i?'sel':''} ${L.flash&&L.flash[0]===i?'bad':''}" data-act="mL" data-i="${i}" ${L.matched.includes(i)?'disabled':''}>${p[0]}</button>`).join('')}</div><div class="mcol">${R.map(j=>`<button class="mbtn ${L.matched.includes(j)?'ok':''} ${L.flash&&L.flash[1]===j?'bad':''}" data-act="mR" data-i="${j}" ${L.matched.includes(j)?'disabled':''}>${ex.pairs[j][1]}</button>`).join('')}</div></div>`; }
-  else if(ex.type==='sim'){ const s=L.sim, c=simCalc();
+  let body='', can=false;
+  if(ex.type==='card') body=say('先看一個重點','happy')+`<div class="tcard"><span class="pill w" style="align-self:flex-start">重點卡</span><h3>${ex.h}</h3><p>${ex.p}</p></div>`;
+  else if(ex.type==='choice'){ body=say(ex.q,'think')+`<div class="optlist">${ex.opts.map((o,i)=>`<button class="dopt ${L.sel===i?'sel':''} ${L.checked&&i===ex.a?'right':''} ${L.checked&&L.sel===i&&i!==ex.a?'wrong':''}" data-act="lsel" data-i="${i}" ${L.checked?'disabled':''}><span class="k">${i+1}</span>${o}</button>`).join('')}</div>`; can=L.sel!=null; }
+  else if(ex.type==='fill'){ body=say(ex.q,'think')+`<div class="fillline">${ex.parts[0]}<button class="blank ${L.fill?'filled':''} ${L.checked?(L.right?'right':'wrong'):''}" data-act="fclear" ${L.checked?'disabled':''}>${L.fill||'　　　'}</button>${ex.parts[1]}</div><div class="bank">${ex.bank.map(w=>`<button class="wchip ${L.fill===w?'used':''}" data-act="fpick" data-v="${w}" ${L.checked||L.fill===w?'disabled':''}>${w}</button>`).join('')}</div>`; can=!!L.fill; }
+  else if(ex.type==='match'){ body=say(ex.q,'think')+`<div class="mgrid"><div class="mcol">${ex.pairs.map((p,i)=>`<button class="mbtn ${L.matched.includes(i)?'ok':''} ${L.pickL===i?'sel':''} ${L.flash&&L.flash[0]===i?'bad':''}" data-act="mL" data-i="${i}" ${L.matched.includes(i)?'disabled':''}>${p[0]}</button>`).join('')}</div><div class="mcol">${L.rOrder.map(j=>`<button class="mbtn ${L.matched.includes(j)?'ok':''} ${L.flash&&L.flash[1]===j?'bad':''}" data-act="mR" data-i="${j}" ${L.matched.includes(j)?'disabled':''}>${ex.pairs[j][1]}</button>`).join('')}</div></div>`; }
+  else if(ex.type==='sim'){ const s=L.sim, c=simCalc(); can=true;
     body=say(ex.q,'think')+`<div class="simbox"><div class="row"><b>元大高股息 0056</b><span class="lotsw">${['整股','零股'].map(t=>`<button class="${s.lot===t?'on':''}" data-act="slot" data-v="${t}" ${L.checked?'disabled':''}>${t}</button>`).join('')}</span></div>
       <div class="stepper"><button data-act="sqty" data-d="-1" ${L.checked?'disabled':''}>−</button><span class="v">${fmt(s.qty)}</span><button data-act="sqty" data-d="1" ${L.checked?'disabled':''}>＋</button></div>
       ${s.lot==='零股'?`<div class="chips">${[100,200,270,300].map(v=>`<button class="chip ${s.qty===v?'on':''}" data-act="sset" data-v="${v}" ${L.checked?'disabled':''}>${v} 股</button>`).join('')}</div>`:''}
-      <div class="row" style="font-size:15px"><span>單位：${s.lot==='整股'?'1000股':'股'}</span><span>金額約：<b class="num">${fmt(c.amt)}</b> 元</span></div><span class="tiny">練習用，不會真的下單</span></div>`; canCheck=true; }
+      <div class="livebuy">你正在買進 <b>${fmt(c.sh)} 股</b>・約 ${fmt(c.amt)} 元</div><span class="tiny">練習用，不會真的下單</span></div>`; }
   let fixed;
   if(ex.type==='card') fixed=`<div class="lfoot"><button class="dbtn" data-act="lnext">繼續</button></div>`;
   else if(ex.type==='match') fixed=L.checked?fb(true,'全部配對完成！'):`<div class="lfoot"><span class="tiny" style="text-align:center">先點左邊，再點右邊的對應說明</span></div>`;
-  else if(!L.checked) fixed=`<div class="lfoot"><button class="dbtn" data-act="lcheck" ${canCheck?'':'disabled'}>檢查</button></div>`;
-  else fixed=fb(L.right, ex.why, ex);
-  return {top, full:true, body:`<div class="lbody">${body}</div>`, fixed};
+  else if(!L.checked) fixed=`<div class="lfoot"><button class="dbtn" data-act="lcheck" ${can?'':'disabled'}>檢查</button></div>`;
+  else fixed=fb(L.right,ex.why,ex);
+  return {top,full:true,body:`<div class="lbody">${body}</div>`,fixed};
 };
-function fb(ok,why,ex){ const ans = ex&&!ok ? (ex.type==='choice'?`正確答案：${ex.opts[ex.a]}<br>`:ex.type==='fill'?`正確答案：${ex.a}<br>`:'') : '';
+function fb(ok,why,ex){ const ans=ex&&!ok?(ex.type==='choice'?`正確答案：${ex.opts[ex.a]}<br>`:ex.type==='fill'?`正確答案：${ex.a}<br>`:''):'';
   return `<div class="fb ${ok?'ok':'no'}"><div class="fbh">${ok?'✓ 答對了！':'差一點！'}</div><div class="fbt">${ans}${why}</div>${ok?'':'<div class="tiny" style="color:inherit;opacity:.8">這題等一下會再出現一次</div>'}<button class="dbtn ${ok?'':'org'}" data-act="lnext">繼續</button></div>`; }
-
-SCR.lessonDone = () => { const r=S.lastResult, l=findL(r.id); const wk=['一','二','三','四','五','六','日'];
-  return {full:true, top:'<div style="height:8px"></div>', body:`<div class="lbody" style="align-items:center;text-align:center;gap:14px">
-   <div style="margin-top:8px">${sprout(120,'cheer')}</div>
-   <h2 style="margin:0;font-size:24px;color:#c8620e">關卡完成！</h2>
-   <div class="sub">「${l.t}」</div>
-   <div class="dstats"><div><span>總 XP</span><b>+${r.xp}</b></div><div><span>正確率</span><b>${r.acc}%</b></div><div><span>用時</span><b>${r.time}</b></div></div>
-   ${r.streakUp?`<div class="streakc"><div style="font-size:30px">🔥 <b>${S.streak}</b> 天連續學習</div><div class="wk">${wk.map((w,i)=>`<span class="${i<=3?'on':''}">${w}</span>`).join('')}</div><span class="tiny">今天的目標 ${S.today}/${S.goal} XP${S.today>=S.goal?'・已達成 🎉':''}</span></div>`:''}
-   ${r.rw.length?`<div class="rwbox"><b>獲得獎勵 🎁</b>${r.rw.map(([i,t,v])=>`<div class="rwi"><span style="font-size:22px">${i}</span><span style="flex:1;text-align:left">${t}</span><b>${v}</b></div>`).join('')}<button class="btn sm ghost" data-go="rewards">查看我的學習獎勵</button></div>`:''}
-   ${l.cta?`<div class="explain" style="text-align:left;width:100%"><b>學完立即實戰</b>：把剛學到的，在 App 裡真正的功能上試一次。</div>`:''}
-  </div>`, fixed:`<div class="lfoot">${l.cta?`<button class="dbtn" data-act="doCta" data-id="${l.id}">${l.cta[0]}</button><button class="dbtn ghost" data-act="toPath">回到學習路徑</button>`:`<button class="dbtn" data-act="toPath">繼續學習</button>`}</div>`};
-};
+function addCredit(v,t){ S.credit+=v; S.ledger.unshift({t,v,d:'11/16'}); }
+function addPts(v,t){ S.pts+=v; S.ledger.unshift({t,v,pt:true,d:'11/16'}); }
 function finishLesson(){ const L=S.lesson,l=findL(L.id); const graded=l.ex.filter(e=>e.type!=='card').length; const first=!S.done.includes(l.id);
   const xp=(first?10:5)+(L.mistakes===0?5:0); S.xp+=xp; S.today+=xp; if(first) S.done.push(l.id);
   let streakUp=false; if(!S.studiedToday){ S.studiedToday=true; S.streak++; streakUp=true; }
-  const sec=Math.max(20,Math.round((Date.now()-L.start)/1000));
   const rw=[]; if(!S.goalHit&&S.today>=S.goal){ S.goalHit=true; addPts(10,'每日目標達成'); rw.push(['🎯','每日目標達成','+10 學習點']); }
   if(l.boss&&first){ addCredit(50,'完成單元挑戰：'+l.unit.title); rw.push(['🏆','完成單元挑戰','手續費抵用金 50 元']); }
   if(S.streak>=7&&!S.streak7){ S.streak7=true; addCredit(30,'連續學習 7 天'); rw.push(['🔥','連續學習 7 天','手續費抵用金 30 元']); }
   if(S.pts>=100) rw.push(['🔁','學習點滿 100','可兌換 10 元']);
+  const sec=Math.max(20,Math.round((Date.now()-L.start)/1000));
   S.lastResult={rw,id:l.id,xp,acc:Math.round(graded/Math.max(1,graded+L.mistakes)*100),time:Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'),streakUp};
-  S.lesson=null; stack=[{name:'service',p:{}},{name:'learn',p:{}}]; cur={name:'lessonDone',p:{}}; render(); }
-
-/* ----- 學習獎勵：手續費抵用金（示意） ----- */
+  S.lesson=null; stack=[{name:'home',p:{}},{name:'learn',p:{}}]; cur={name:'lessonDone',p:{}}; render(); }
+SCR.lessonDone = () => { const r=S.lastResult, l=findL(r.id); const wk=['一','二','三','四','五','六','日'];
+  return {full:true, top:'<div style="height:8px"></div>', body:`<div class="lbody" style="align-items:center;text-align:center;gap:14px">
+   <div style="margin-top:8px">${sprout(110,'cheer')}</div><h2 style="margin:0;font-size:24px;color:#c8620e">關卡完成！</h2><div class="sub">「${l.t}」</div>
+   <div class="dstats"><div><span>總 XP</span><b>+${r.xp}</b></div><div><span>正確率</span><b>${r.acc}%</b></div><div><span>用時</span><b>${r.time}</b></div></div>
+   ${r.rw.length?`<div class="rwbox"><b>獲得獎勵 🎁</b>${r.rw.map(([i,t,v])=>`<div class="rwi"><span style="font-size:22px">${i}</span><span style="flex:1;text-align:left">${t}</span><b>${v}</b></div>`).join('')}<button class="btn sm ghost" data-go="rewards">查看我的學習獎勵</button></div>`:''}
+   ${r.streakUp?`<div class="streakc"><div style="font-size:28px">🔥 <b>${S.streak}</b> 天連續學習</div><div class="wk">${wk.map((w,i)=>`<span class="${i<=3?'on':''}">${w}</span>`).join('')}</div><span class="tiny">今天的目標 ${S.today}/${S.goal} XP${S.today>=S.goal?'・已達成 🎉':''}</span></div>`:''}
+   ${l.cta?`<div class="explain" style="text-align:left;width:100%"><b>學完立即實戰</b>：把剛學到的，在 App 裡真正的功能上試一次。</div>`:''}</div>`,
+   fixed:`<div class="lfoot">${l.cta?`<button class="dbtn" data-act="doCta" data-id="${l.id}">${l.cta[0]}</button><button class="dbtn ghost" data-act="toPath">回到學習路徑</button>`:`<button class="dbtn" data-act="toPath">繼續學習</button>`}</div>`};
+};
 const RULES=[['🎯','每日目標達成（20 XP）','+10 學習點'],['🧰','打開路徑上的寶箱','+5 學習點'],['🏆','完成單元挑戰','手續費抵用金 50 元'],['🔥','連續學習 7 天','手續費抵用金 30 元'],['🔁','學習點滿 100 點','可兌換抵用金 10 元']];
-function addCredit(v,t){ S.credit+=v; S.ledger.unshift({t,v,d:'11/14'}); }
-function addPts(v,t){ S.pts+=v; S.ledger.unshift({t,v:v,pt:true,d:'11/14'}); }
 SCR.rewards = () => ({back:true,title:'我的學習獎勵', body:`
-  <div class="nw" style="border-radius:16px;padding:10px;background:#fffaf2;display:flex;flex-direction:column;gap:12px">
-  <div class="tiny" style="text-align:right">${NEW}</div>
+  <div class="nw" style="border-radius:16px;padding:10px;background:#fffaf2;display:flex;flex-direction:column;gap:12px"><div class="tiny" style="text-align:right">${NEW}</div>
   <div class="ticket"><div class="tl"><span class="tiny" style="color:#8a4b00">台股電子下單手續費抵用金</span><b class="num">${fmt(S.credit)} <small>元</small></b><span class="tiny">下單時自動折抵・有效 30 天（示意）</span></div><div class="tr">🎟️</div></div>
   <div class="card"><div class="row"><h3>學習點數</h3><b class="num">${S.pts} / 100</b></div><div class="prog" style="margin:8px 0 6px"><i style="width:${Math.min(100,S.pts)}%"></i></div>
     <button class="btn ${S.pts>=100?'':'ghost'}" data-act="redeem" ${S.pts>=100?'':'disabled'}>${S.pts>=100?'兌換 10 元手續費抵用金':'再 '+(100-S.pts)+' 點可兌換 10 元'}</button></div>
-  <div class="card"><h3>怎麼拿獎勵</h3><div class="list" style="margin-top:4px">${RULES.map(([i,t,v],k)=>`<div class="li" style="cursor:default"><span style="font-size:22px">${i}</span><span class="mid"><b>${t}</b><span>${k===3?`目前連續 ${S.streak} 天，再 ${Math.max(0,7-S.streak)} 天`:k===0?(S.goalHit?'今天已達成':'今天 '+S.today+'/'+S.goal+' XP'):''}</span></span><span class="pill w">${v}</span></div>`).join('')}</div></div>
-  <div class="card"><h3>紀錄</h3>${S.ledger.length?S.ledger.map(e=>`<div class="row" style="padding:6px 0;border-bottom:1px solid var(--hair);font-size:13.5px"><span>${e.t}</span><b class="num ${e.v<0?'dn':''}">${e.v>0?'+':''}${e.v}${e.pt?' 點':' 元'}</b></div>`).join(''):'<p class="sub" style="margin:6px 0 0">還沒有紀錄，完成第一關就會開始累積。</p>'}</div>
-  <div class="explain">只要學習就能領，<b>不需要先交易</b>；抵用金只折抵台股電子下單手續費，每筆最多折抵當筆手續費，不能換現金。實際規則以元大公告為準（示意）。</div>
-  </div>
+  <div class="card"><h3>怎麼拿獎勵</h3>${RULES.map(([i,t,v],k)=>`<div class="li" style="cursor:default"><span style="font-size:22px">${i}</span><span class="mid"><b>${t}</b><span>${k===3?`目前連續 ${S.streak} 天`:k===0?(S.goalHit?'今天已達成':'今天 '+S.today+'/'+S.goal+' XP'):''}</span></span><span class="pill w">${v}</span></div>`).join('')}</div>
+  <div class="card"><h3>紀錄</h3>${S.ledger.length?S.ledger.map(e=>`<div class="row" style="padding:6px 0;border-bottom:1px solid var(--hair);font-size:13.5px"><span>${e.t}</span><b class="num ${e.v<0?'dn':''}">${e.v>0?'+':''}${e.v}${e.pt?' 點':' 元'}</b></div>`).join(''):'<p class="sub" style="margin:6px 0 0">完成第一關就會開始累積。</p>'}</div>
+  <div class="explain">只要學習就能領，<b>不需要先交易</b>；抵用金只折抵台股電子下單手續費，每筆最多折抵當筆手續費，不能換現金。實際規則以元大公告為準（示意）。</div></div>
   <button class="btn" data-go="learn">回到學習路徑</button>`});
 
-SCR.help = () => ({back:true,title:'找真人幫忙', body:`
-  <div class="explain nw" style="background:#fffaf2;color:#5c3a00">${NEW} 不推銷商品，只陪你看懂操作，或第一次設定時一起確認。</div>
-  <div class="card"><h3>新手小班工作坊（示意）</h3><p class="sub" style="margin:2px 0 8px">6 人小班、90 分鐘，用模擬帳戶練習下單與定期定額。</p>
-    ${[['12/06（六）14:00','線上','剩 2 位'],['12/13（六）10:00','台北・實體','剩 4 位']].map(([d,w,r])=>`<div class="li" style="cursor:default"><span class="mid"><b>${d}</b><span>${w}・${r}</span></span><button class="btn sm" data-act="toast" data-t="已預約 ${d} 工作坊（示意）">預約</button></div>`).join('')}</div>
-  <div class="card"><h3>首次設定，線上陪看 15 分鐘</h3><p class="sub" style="margin:2px 0 8px">定期定額或條件單第一次設定時，專人透過畫面一起確認。</p><button class="btn ghost" data-act="toast" data-t="已送出預約，1 個工作天內聯絡你（示意）">預約時段</button></div>
-  <div class="card"><h3>線上客服</h3><p class="sub" style="margin:2px 0 0">現有功能，處理帳務、開戶與系統問題。</p></div>`});
-
-/* ---------- 浮層：下拉選單、AI ---------- */
+/* ----- 小芽：名詞解釋與情境求助（新手輔助的一部分） ----- */
 function sheetHTML(){ const o=S.order; if(!S.sheet||!o) return '';
   if(S.sheet==='mode'){ const opts=o.lot==='整股'?[['board','整股 ROD','單位是張，1 張 = 1,000 股']]:[['odd','盤中零股','9:00–13:30，約每分鐘撮合一次'],['after','盤後零股','13:40–14:30 下單，14:30 一次撮合']];
-    return `<div class="scrim" data-act="closeSheet"></div><div class="sheet"><div class="sh-h"><b>交易方式</b><button data-act="closeSheet">×</button></div><div class="sh-b">${opts.map(([k,t,d])=>`<button class="optrow ${o.mode===k?'on':''}" data-act="mode" data-v="${k}"><b>${t}</b>${S.guide?`<span class="sub">${d}</span>`:''}</button>`).join('')}${S.guide?`<div class="tiny nw" style="border-radius:8px;padding:4px 8px;background:#fffaf2">${NEW} 選項下方的白話說明</div>`:''}</div></div>`; }
-  if(S.sheet==='ptype'){ const dis=o.mode!=='board';
-    return `<div class="scrim" data-act="closeSheet"></div><div class="sheet"><div class="sh-h"><b>價格條件</b><button data-act="closeSheet">×</button></div><div class="sh-b">
-      <button class="optrow ${o.ptype==='limit'?'on':''}" data-act="ptype" data-v="limit"><b>限價</b>${S.guide?'<span class="sub">設定你願意付的最高價，不會買貴，但可能買不到</span>':''}</button>
-      <button class="optrow ${o.ptype==='market'?'on':''}" data-act="ptype" data-v="market" ${dis?'disabled style="opacity:.45"':''}><b>市價</b>${S.guide?`<span class="sub">照當下價格馬上成交${dis?'（零股只能用限價）':''}</span>`:''}</button></div></div>`; }
-  return '';
-}
-const KB = [
- [/(推薦|買哪|哪一檔|會漲|會跌|明牌|適合我)/,'我不會推薦要買哪一檔，也沒辦法預測漲跌。我可以幫你比較商品差在哪、解釋名詞，或確認這筆單的金額。也可以先回答 3 個目標問題，看看適合先認識哪一類商品。',[['做目標設定','goal'],['看 ETF 比較','compare']]],
- [/(整股|張)/,'整股的單位是「張」，1 張 = 1,000 股；零股的單位是「股」。下單頁右上角可以切換整股／零股，下方「單位」會顯示目前是 1000股 還是 股。'],
- [/(零股)/,'零股是不到 1 張（1,000 股）的股票，單位是「股」。盤中零股 9:00–13:30 可以下單，約每分鐘撮合一次；盤後零股 13:40–14:30 下單，14:30 一次撮合。零股只能用限價。'],
- [/(限價|市價)/,'限價是你願意付的最高價格：市場價格比它高就不會成交，所以不會買貴，但可能買不到。市價是照當下價格馬上成交，速度快，價格可能比你看到的高一點。在下單頁按「…」可以切換。'],
- [/(違約|交割)/,'違約交割是成交後兩個交易日，交割帳戶的錢不夠扣。下單頁的新手說明會幫你算好扣款金額，餘額不足時會先提醒你。只要在扣款日前把錢轉進來就沒問題。'],
- [/(取消)/,'還沒成交的委託都可以取消。到「交易 → 委託」點那筆單，按取消；看到「已取消」才算完成。已經成交的部分不能取消。'],
- [/(還沒成交|沒成交|排隊)/,'通常是你的限價比目前賣方掛的價格低，所以還在排隊。可以再等等，或取消後用新的價格重下。'],
- [/(除息|股利|配息)/,'除息是發股利的那一天，股價會先扣掉要發的股利，所以帳面看起來會跌；股利會在發放日匯進你的帳戶，整體價值其實沒有少。庫存頁的「除權息總覽」可以看到時間。'],
- [/(定期定額)/,'定期定額是每月固定日子、固定金額自動買進，不用自己挑時機。首頁「常用功能」第一個就是，隨時可以暫停或修改。',[['設定定期定額','dca']]],
- [/(報酬|變少|為什麼跌|為什麼變|變了)/,'今天的變化主要來自大盤上漲帶動 ETF，以及兆豐金下跌。我把每一檔的影響整理在這裡。',[['看原因','why']]],
- [/(殖利率)/,'殖利率是一年股利除以股價。例如股價 100 元、一年配 5 元，殖利率就是 5%。殖利率高不一定比較好，也要看公司能不能穩定配息。'],
+    return `<div class="scrim" data-act="closeSheet"></div><div class="sheet"><div class="sh-h"><b>交易方式</b><button data-act="closeSheet">×</button></div><div class="sh-b">${opts.map(([k,t,d])=>`<button class="optrow ${o.mode===k?'on':''}" data-act="mode" data-v="${k}"><b>${t}</b>${S.guide?`<span class="sub">${d}</span>`:''}</button>`).join('')}</div></div>`; }
+  const dis=o.mode!=='board';
+  return `<div class="scrim" data-act="closeSheet"></div><div class="sheet"><div class="sh-h"><b>價格條件</b><button data-act="closeSheet">×</button></div><div class="sh-b">
+    <button class="optrow ${o.ptype==='limit'?'on':''}" data-act="ptype" data-v="limit"><b>限價</b>${S.guide?'<span class="sub">設定你願意付的最高價，不會買貴，但可能買不到</span>':''}</button>
+    <button class="optrow ${o.ptype==='market'?'on':''}" data-act="ptype" data-v="market" ${dis?'disabled style="opacity:.45"':''}><b>市價</b>${S.guide?`<span class="sub">照當下價格馬上成交${dis?'（零股只能用限價）':''}</span>`:''}</button></div></div>`; }
+const KB=[
+ [/(推薦|買哪|哪一檔|會漲|會跌|明牌|適合我)/,'我不會推薦要買哪一檔，也沒辦法預測漲跌。我可以幫你比較商品差在哪、解釋名詞，或試算投入金額。',[['比較兩檔 ETF','compare']]],
+ [/(整股|張)/,'整股的單位是「張」，1 張 = 1,000 股；零股的單位是「股」。下單頁會即時顯示「你正在買進幾股」，切換後記得重新確認。'],
+ [/(零股)/,'零股是不到 1 張的股票，單位是「股」。盤中零股 9:00–13:30 下單，約每分鐘撮合；盤後零股 13:40–14:30 下單，14:30 一次撮合。零股只能用限價。'],
+ [/(限價|市價)/,'限價是你願意付的最高價：市場價格比它高就不會成交，不會買貴但可能買不到。市價是照當下價格成交，速度快，價格可能高一點。'],
+ [/(違約|交割)/,'違約交割是成交後兩個交易日，交割帳戶的錢不夠扣。下單頁會算好扣款金額，餘額不足時會先提醒你。'],
+ [/(取消)/,'還沒成交的委託都可以取消。到「交易 → 委託」點那筆單，按取消；看到「已取消」才算完成。'],
+ [/(還沒成交|沒成交|排隊)/,'通常是你的限價比賣方掛的價格低，所以還在排隊。可以再等等，或取消後用新的價格重下。'],
+ [/(除息|股利|配息)/,'除息那天股價會先扣掉要發的股利，帳面看起來會跌；股利會在發放日匯進你的帳戶。'],
+ [/(定期定額|扣款)/,'定期定額是每月固定日子、固定金額自動買進。扣款日可以選 1–28 號，設定後可以在「交易 → 委託 → 定期定額明細」看結果。',[['設定定期定額','dca']]],
+ [/(報酬|變少|為什麼變|變了)/,'基本報酬是（現價 − 平均成本）× 股數。今天的變化主要來自大盤上漲，以及兆豐金下跌。',[['看原因','why']]],
+ [/(殖利率)/,'殖利率是一年股利除以股價。例如股價 100 元、一年配 5 元，殖利率就是 5%。殖利率高不一定比較好，也要看能不能穩定配息。'],
+ [/(持股|占比|標示)/,'ETF 標示卡會列出前五大持股與占比。某一家公司占比越高，它的漲跌對這檔 ETF 的影響越大。'],
 ];
-const CHIPS = {trade:['整股跟零股差在哪？','限價跟市價差在哪？','我會不會違約交割？'],confirm:['我會不會違約交割？','送出後可以取消嗎？'],status:['為什麼還沒成交？','委託中可以取消嗎？'],why:['除息是什麼？'],product:['這檔適合我嗎？','殖利率是什麼？'],compare:['要買哪一檔比較好？','殖利率是什麼？'],dca:['定期定額是什麼？'],_:['為什麼報酬變了？','定期定額是什麼？','要買哪一檔比較好？']};
-function aiAnswer(q){ for(const [re,a,acts] of KB){ if(re.test(q)) return {a,acts}; } return {a:'這題我還不確定怎麼回答，怕給你錯的資訊。你可以換個說法，或找真人幫你看。',acts:[['找真人幫忙','help']]}; }
-function ask(q){ S.ai.open=true; S.sheet=null; if(!S.ai.msgs.length) S.ai.msgs.push({t:greet()}); S.ai.msgs.push({me:true,t:q}); const r=aiAnswer(q); S.ai.msgs.push({t:r.a,acts:r.acts}); renderOverlay(); renderCtx(); }
-function greet(){ return '嗨，我是投資小幫手。我只解釋名詞和操作，不會推薦個股。這一頁有什麼不懂的嗎？'; }
+const CHIPS={trade:['整股跟零股差在哪？','限價跟市價差在哪？','我會不會違約交割？'],confirm:['我會不會違約交割？','送出後可以取消嗎？'],status:['為什麼還沒成交？','委託中可以取消嗎？'],why:['除息是什麼？'],product:['殖利率是什麼？','持股占比怎麼看？'],compare:['要買哪一檔比較好？','殖利率是什麼？'],dca:['定期定額是什麼？'],holding:['報酬怎麼算？'],_:['為什麼報酬變了？','定期定額是什麼？','要買哪一檔比較好？']};
+function aiAnswer(q){ for(const [re,a,acts] of KB){ if(re.test(q)) return {a,acts}; } return {a:'這題我還不確定怎麼回答，怕給你錯的資訊。你可以換個說法，或聯絡線上客服。'}; }
+function ask(q){ S.ai.open=true; S.sheet=null; if(!S.ai.msgs.length) S.ai.msgs.push({t:greet()}); S.ai.msgs.push({me:true,t:esc(q)}); const r=aiAnswer(q); S.ai.msgs.push({t:r.a,acts:r.acts}); renderOverlay(); }
+function greet(){ return '嗨，我是小芽。我只解釋名詞和操作，不會推薦個股。這一頁有什麼不懂的嗎？'; }
 function renderOverlay(){ const o=$('#overlay');
   if(S.sheet){ o.innerHTML=sheetHTML(); return; }
   if(!S.ai.open){ o.innerHTML=''; return; }
   if(!S.ai.msgs.length) S.ai.msgs.push({t:greet()});
   const chips=CHIPS[cur.name]||CHIPS._;
-  o.innerHTML=`<div class="scrim" data-act="closeAI"></div><div class="sheet tall" role="dialog" aria-label="AI 小幫手">
-    <div class="sh-h"><span>💬</span><b>投資小幫手 <span class="badge">新增</span></b><button data-act="closeAI" aria-label="關閉">×</button></div>
+  o.innerHTML=`<div class="scrim" data-act="closeAI"></div><div class="sheet tall" role="dialog" aria-label="小芽情境求助">
+    <div class="sh-h">${sprout(30,'happy')}<b>問小芽 <span class="badge">新增</span></b><button data-act="closeAI" aria-label="關閉">×</button></div>
     <div class="msgs" id="msgs">${S.ai.msgs.map(m=>`<div class="m ${m.me?'me':'bot'}">${m.t}${m.acts?`<div class="acts">${m.acts.map(([t,g])=>`<button class="btn sm ghost" data-act="aiGo" data-g="${g}">${t}</button>`).join('')}</div>`:''}</div>`).join('')}</div>
     <div class="sh-f"><div class="chips">${chips.map(c=>`<button class="chip" data-act="ask" data-q="${c}">${c}</button>`).join('')}</div>
       <form id="aiForm"><input id="aiInput" placeholder="輸入問題，例如：零股是什麼？" autocomplete="off"><button class="btn sm" type="submit">送出</button></form>
@@ -945,49 +979,12 @@ function renderOverlay(){ const o=$('#overlay');
   $('#aiForm').addEventListener('submit',e=>{e.preventDefault(); const v=$('#aiInput').value.trim(); if(v) ask(v);});
 }
 
-/* ---------- 右側旅程對照 ---------- */
-const CTX = {
- home:['初階・Stage 1 起心動念','首頁（現有＋新增）','目標模糊、不知道從哪裡開始；看得到損益但不懂為什麼變。','保留帳戶卡、常用功能、報價速覽；新增「新手起步 3 步」、「為什麼變了」入口、4 個新增常用功能與今天的學習。'],
- watch:['初階・Stage 2 找標的','自選（現有＋新增）','「感覺好像一堆 ETF 都一樣。」','沿用現有自選清單；ETF 名稱下方新增一句話白話說明（可關閉）。'],
- search:['初階・Stage 2 找標的','搜尋','—','現有搜尋入口。'],
- market:['初階・Stage 2 找標的','行情（現有＋新增）','資訊來源零散，難判斷可信度。','新增「ETF 白話」分頁：每檔先說它買了什麼、適合誰。'],
- compare:['初階・Stage 2 找標的','ETF 白話比較（新增）','分不清市值型與高股息。','並排白話比較類型、配息頻率與適合的人，接到定期定額。'],
- product:['初階・Stage 3 決定時機','個股報價（現有＋新增）','「怕買在高點」，猶豫拉長決策時間。','保留報價、五檔與現有股利資訊；新增「這是什麼」與近 1 年價格位置（不預測漲跌）。'],
- trade:['初階・Stage 4 下單（最大斷點）','交易：下單／委託／庫存','5 人中 3 人卡在下單選項或單位；擔心「十股下成十張」、違約交割；委託狀態看不懂。','完整保留現有下單頁；在數量與價格下方疊加可關閉的「新手說明」：交易方式白話、張股換算警示、扣款金額與餘額檢查、占比提醒、下單理由。'],
- confirm:['初階・Stage 4 下單','委託確認（新增說明）','送出前不確定自己下了什麼。','用一句完整的話重述這筆委託與扣款日，再送出。'],
- status:['初階・Stage 5 確認委託與成交','委託狀態（新增）','委託、取消、成交狀態不清楚。','時間軸呈現 送出 → 委託中 → 成交／已取消，並說明下一步。'],
- goal:['初階・Stage 1 起心動念','目標設定（新增）','沒有自己的原則，跟著身邊的人買。','3 個問題說明可先認識的商品類型，不推薦個股。'],
- goalResult:['初階・Stage 1 起心動念','目標結果（新增）','不確定計畫是否符合財務目標。','依目標說明商品類型；怕跌的人建議小額定期定額。'],
- dca:['初階・Stage 3–4','定期定額（現有＋新增）','首次設定擔心弄錯。','沿用現有功能，加上商品一句話說明、一句話確認與真人陪看入口。'],
- why:['初階・Stage 6 持有與追蹤','為什麼變了（新增）','「報酬率變了我也不知道為什麼。」','拆解每一檔對今日變化的影響，連到相關消息。'],
- alloc:['中階・Stage 4–5','我的配置（新增）','中階要自己用 Excel 算占比、設停損規則。','類型占比、自訂單一個股上限、以配置為主的提醒規則。'],
- review:['中階・Stage 5 檢視','交易回顧（新增）','交易理由沒有紀錄，難檢討情緒性操作。','把下單時記的理由、心情和後來結果放在一起。'],
- service:['初階・Stage 7 求助與學習','服務（現有＋新增）','不知道去哪裡學、怕被推銷。','新增新手學堂、工作坊、AI 小幫手入口，與現有服務並列。'],
- learn:['初階・Stage 7 求助與學習','新手學堂：學習路徑（新增）','教學影片太長，看一半就關掉；有立即需求才學，偏好短、白話、不像上課。','多鄰國式學習路徑：4 個單元、一格一關，每關 1–2 分鐘；連續天數、XP 與每日目標維持習慣；寶箱與單元挑戰給階段成就；陪伴角色「小芽」。'],
- lesson:['初階・Stage 7 求助與學習','關卡練習（新增）','怕上課式內容、怕犯錯。','重點卡＋選擇、填空、配對、模擬下單四種題型；答完底部立刻回饋對錯與原因；答錯的題目稍後再出一次，不扣分、不扣生命值。'],
- rewards:['初階・Stage 7 → Stage 4','我的學習獎勵（新增）','學習缺乏持續動機；學完不一定會去實際操作。','達成每日目標、開寶箱累積學習點，完成單元挑戰或連續 7 天得到手續費抵用金；下單時自動折抵，連到「學完立即實戰」。獎勵不以交易為前提。'],
- lessonDone:['初階・Stage 7 → Stage 4','完成畫面與實戰任務（新增）','學完沒有下一步（三派 App 分析）。','慶祝畫面顯示 XP、正確率與連續天數；「實戰任務」直接帶到下單、定期定額等真正功能，落實學完立即實戰。'],
- help:['初階・Stage 7 求助與學習','找真人幫忙（新增）','怕被推銷而不敢找真人。','小班工作坊（3 位受訪者首選）與首次設定陪看，和現有客服分開。'],
-};
-function renderCtx(){ if(!$('#ctx')) return; const c=CTX[cur.name]||CTX.home; $('#ctx').innerHTML=`<span class="tagp">目前畫面對應</span><h3>${c[1]}</h3><dl><dt>旅程</dt><dd>${c[0]}</dd><dt>痛點</dt><dd>${c[2]}</dd><dt>設計</dt><dd>${c[3]}</dd></dl>${S.ai.open?'<p class="pnote" style="margin-top:8px">AI 小幫手（新增）：依目前頁面給建議問題，不跳離頁面、不推薦個股。</p>':''}`; }
-
-const TASKS=[
- ['第一次使用：完成新手起步，設定一筆每月 3,000 元的定期定額。','觀察：能否找到起步卡、是否理解商品類型說明。',()=>{cur={name:'home',p:{}};}],
- ['用盤中零股買 50 股 0056，說出這筆要付多少錢，送出後再把它取消。','觀察：新手說明是否被注意到、取消後是否確定已完成。',()=>{cur={name:'product',p:{sym:'0056'}};}],
- ['庫存今天有變化，找出原因；再看看哪一檔超過你設的上限。','觀察：能否在庫存頁找到「為什麼變了」與我的配置。',()=>{S.tradeSub='inv';cur={name:'trade',p:{}};}],
- ['在新手學堂完成第一關「張和股」；接著在下單頁不離開畫面，問小幫手「限價是什麼」。','觀察：路徑與題型是否看得懂、是否想繼續下一關、AI 回答是否夠清楚。',()=>{stack=[{name:'service',p:{}}];cur={name:'learn',p:{}};}],
-];
-function renderPanel(){ if(!$('#tasks')) return;
-  $('#tasks').innerHTML=TASKS.map((t,i)=>`<div class="task"><span class="no">T${i+1}</span><span><p>${t[0]}</p><small>${t[1]}</small></span><button class="pbtn" data-task="${i}">開始</button></div>`).join('');
-  const J=[['home','首頁'],['watch','自選'],['market','行情'],['product','個股報價'],['order','下單'],['orders','委託'],['inv','庫存'],['dca','定期定額'],['goal','目標設定'],['compare','ETF 比較'],['why','為什麼變了'],['alloc','我的配置'],['review','交易回顧'],['learn','新手學堂'],['rewards','學習獎勵'],['help','找真人']];
-  $('#jump').innerHTML=J.map(([k,t])=>`<button class="pbtn" data-jump="${k}">${t}</button>`).join('')+`<button class="pbtn" data-reset="1">重設原型</button>`;
-}
-
 /* ---------- 主繪製 ---------- */
 function render(){
   if(cur.name==='lesson'&&!S.lesson) cur={name:'learn',p:{}};
   if(cur.name==='lessonDone'&&!S.lastResult) cur={name:'learn',p:{}};
-  if((cur.name==='confirm')&&!S.order) S.order=newOrder('0056');
+  if(cur.name==='confirm'&&!S.order) S.order=newOrder('0056');
+  if(cur.name==='dcaDone'&&!S.dcas.length) cur={name:'home',p:{}};
   const s=SCR[cur.name](cur.p||{});
   const isTab=TABS.includes(cur.name);
   $('#top').innerHTML = s.top || `<div class="ptitle">${s.back?'<button class="bk" data-act="back" aria-label="返回">‹</button>':''}<h2>${s.title||''}</h2>${s.right?`<span class="rt">${s.right}</span>`:''}</div>`;
@@ -996,66 +993,75 @@ function render(){
   const navT=[['home','首頁','home','homeO'],['watch','自選','star','starO'],['trade','交易'],['market','行情','candle','candle'],['service','服務','grid','grid']];
   const active=isTab?cur.name:(stack.find(z=>TABS.includes(z.name))||{name:'home'}).name;
   $('#nav').innerHTML=navT.map(([k,t,a,b])=>k==='trade'?`<button class="mid ${active===k?'on':''}" data-act="tab" data-id="trade"><span class="coin">$</span><span class="l">交易</span></button>`:`<button class="${active===k?'on':''}" data-act="tab" data-id="${k}">${active===k?IC[a]:IC[b]}${t}</button>`).join('');
-  $('#fab').classList.toggle('lift',!!s.fixed);
-  $('#nav').style.display=s.full?'none':''; $('#fab').style.display=s.full?'none':'';
+  const fab=$('#fab'); fab.classList.toggle('lift',!!s.fixed); fab.style.display=(s.full||!S.guide)?'none':'';
+  $('#nav').style.display=s.full?'none':'';
   sc.style.paddingBottom=s.fixed?'20px':'96px';
-  renderOverlay(); renderCtx();
+  renderOverlay();
 }
 
 /* ---------- 事件 ---------- */
+document.addEventListener('change',e=>{ const t=e.target;
+  if(t.dataset.cmp!=null){ S.cmp[+t.dataset.cmp]=t.value; render(); }
+  else if(t.hasAttribute('data-dcaday')){ S._dca.day=+t.value; render(); }
+  else if(t.dataset.calc==='amt'){ const v=Math.max(100,Math.min(10000000,Math.round(+t.value||0))); S.calc.amt=v; S.tried=true; render(); }
+});
+document.addEventListener('input',e=>{ const t=e.target;
+  if(t.dataset.input==='other'&&S.order) S.order.other=t.value;
+  else if(t.dataset.input==='rvtxt'){ S._rv.txt=t.value; const b=document.querySelector('[data-act="saveRv"]'); if(b) b.disabled=!(S._rv.tag||S._rv.txt.trim()); }
+});
 document.addEventListener('click',e=>{
-  const pt=e.target.closest('[data-task]'), pr=e.target.closest('[data-reset]'), pj=e.target.closest('[data-jump]');
-  if(pt){ S=fresh(); stack=[]; TASKS[+pt.dataset.task][2](); render(); toast('任務開始'); return; }
-  if(pr){ S=fresh(); stack=[]; cur={name:'home',p:{}}; render(); toast('已重設'); return; }
-  if(pj){ const k=pj.dataset.jump; S.ai.open=false; S.sheet=null; stack=[];
-    if(k==='order'||k==='orders'||k==='inv'){ S.tradeSub=k; cur={name:'trade',p:{}}; }
-    else if(['home','watch','market','service'].includes(k)) cur={name:k,p:{}};
-    else { stack=[{name:'home',p:{}}]; cur={name:k,p:k==='product'?{sym:'0056'}:{}}; if(k==='dca') S._dca=null; }
-    render(); return; }
   if(!e.target.closest('#phone')) return;
-  if(e.target.closest('#fab')){ S.ai.open=true; S.sheet=null; renderOverlay(); renderCtx(); return; }
-  const g=e.target.closest('[data-go]'); if(g){ const p={}; if(g.dataset.sym) p.sym=g.dataset.sym; if(g.dataset.id) p.id=+g.dataset.id; if(g.dataset.go==='dca') S._dca=null; go(g.dataset.go,p); return; }
-  const a=e.target.closest('[data-act]'); if(!a) return; const d=a.dataset, o=S.order;
+  if(e.target.closest('#fab')){ S.ai.open=true; S.sheet=null; renderOverlay(); return; }
+  const g=e.target.closest('[data-go]'); if(g){ const p={}; if(g.dataset.sym) p.sym=g.dataset.sym; if(g.dataset.id) p.id=+g.dataset.id; if(g.dataset.go==='dca') S._dca=null; if(g.dataset.go==='holding') S._rv=null; go(g.dataset.go,p); return; }
+  const a=e.target.closest('[data-act]'); if(!a||a.disabled) return; const d=a.dataset, o=S.order;
   switch(d.act){
     case 'back': back(); break;
     case 'tab': tab(d.id); break;
     case 'toast': toast(d.t); break;
     case 'eye': S.showAmt=!S.showAmt; render(); break;
+    case 'hideTask': S.taskHidden=true; render(); toast('已關閉任務卡'); break;
     case 'homeTab': S.homeTab=d.v; render(); break;
     case 'homeChip': S.homeChip=d.v; render(); break;
     case 'watchTab': S.watchTab=d.v; render(); break;
     case 'mktSeg': S.mktSeg=d.v; render(); break;
     case 'invSeg': S.invSeg=d.v; render(); break;
     case 'tradeSub': S.tradeSub=d.v; stack=[]; cur={name:'trade',p:{}}; S.ai.open=false; render(); break;
-    case 'set': S[d.k]=d.k==='budget'?+d.v:d.v; render(); break;
+    case 'addWatch': if(!S.watch['自選1'].includes(d.sym)) S.watch['自選1'].push(d.sym); render(); toast('已加入自選1'); break;
+    case 'later': if(!S.watch['自選3'].includes(d.sym)) S.watch['自選3'].push(d.sym); render(); toast('已放到自選3，稍後再看'); break;
+    case 'camt': S.calc.amt=+d.v; S.tried=true; render(); break;
+    case 'cdrop': S.calc.drop=+d.v; S.tried=true; render(); break;
     case 'openDca': S._dca=null; go('dca',{}); break;
     case 'dcaFor': S._dca=null; go('dca',{sym:d.sym}); break;
+    case 'dset': S._dca[d.k]=d.k==='sym'?d.v:+d.v; render(); break;
+    case 'saveDca': { const dd={...S._dca, first:nextDate(S._dca.day), status:'wait'}; S.dcas.push(dd); S._dca=null; stack=[]; cur={name:'dcaDone',p:{}}; render(); toast('定期定額已設定（示意）'); break; }
+    case 'dcaRun': { const dd=S.dcas[+d.i], x=P[dd.sym]; dd.status='done'; dd.got=Math.floor(dd.amt/x.price); const h=S.holdings[dd.sym];
+      if(h){ h.cost=+((h.cost*h.qty+x.price*dd.got)/(h.qty+dd.got)).toFixed(2); h.qty+=dd.got; } else S.holdings[dd.sym]={qty:dd.got,cost:x.price};
+      S.trades.unshift({d:'2026/'+dd.first,side:'買',sym:dd.sym,qty:dd.got,price:x.price,reason:'定期定額'}); render(); toast('首次扣款成功（示意）'); break; }
     case 'buy': S.order=newOrder(d.sym,'零股'); S.tradeSub='order'; stack=[]; cur={name:'trade',p:{}}; render(); break;
-    case 'lot': o.lot=d.v; if(d.v==='整股'){o.mode='board';o.qty=1;} else {o.mode='odd';o.qty=50;o.ptype='limit';} render(); break;
+    case 'lot': if(o.lot===d.v) break; o.lot=d.v; if(d.v==='整股'){o.mode='board';o.qty=1;} else {o.mode='odd';o.qty=50;o.ptype='limit';} o.switched=d.v; render(); break;
     case 'sheet': S.sheet=d.v; renderOverlay(); break;
     case 'closeSheet': S.sheet=null; renderOverlay(); break;
     case 'mode': o.mode=d.v; S.sheet=null; render(); break;
     case 'ptype': if(d.v==='market'&&o.mode!=='board') break; o.ptype=d.v; S.sheet=null; render(); break;
-    case 'guide': S.guide=!S.guide; render(); break;
-    case 'qset': o.qty=+d.v; render(); break;
-    case 'oset': o[d.k]= o[d.k]===d.v?null:d.v; render(); break;
+    case 'guide': S.guide=!S.guide; render(); toast(S.guide?'新手輔助已開啟':'新手輔助已關閉：股數、金額、費用與必要提醒仍會顯示'); break;
+    case 'remind': S.remind=!S.remind; render(); break;
+    case 'qset': o.qty=+d.v; o.switched=null; render(); break;
+    case 'oset': o[d.k]= o[d.k]===d.v?null:d.v; render(); if(d.v==='其他'&&o.reason==='其他'){ const i=document.querySelector('[data-input="other"]'); if(i) i.focus(); } break;
     case 'price': { const t=tick(o.price); o.price=Math.max(t,+(o.price+(+d.d)*t).toFixed(2)); render(); break; }
-    case 'qty': { const step=o.mode==='board'?1:(o.qty>=100?50:10); o.qty=Math.max(1,Math.min(o.mode==='board'?99:999,o.qty+(+d.d)*step)); render(); break; }
+    case 'qty': { const step=o.mode==='board'?1:(o.qty>=100?50:10); o.qty=Math.max(1,Math.min(o.mode==='board'?99:999,o.qty+(+d.d)*step)); o.switched=null; render(); break; }
     case 'submit': { const id=Date.now(); S.orders.push({...o,id,status:'pending',disc:calc(o).disc}); S.tradeSub='orders'; stack=[{name:'trade',p:{}}]; cur={name:'status',p:{id}}; render(); toast('委託已送出'); break; }
     case 'openOrder': { const p=S.orders.filter(z=>z.status==='pending').pop(); go('status',{id:p.id}); break; }
     case 'cancel': { const z=S.orders.find(q=>q.id===+d.id); z.status='cancelling'; render(); setTimeout(()=>{ z.status='cancelled'; if(cur.name==='status') render(); toast('取消成功'); },1200); break; }
-    case 'fill': { const z=S.orders.find(q=>q.id===+d.id); z.status='filled'; if(z.disc){ S.credit-=z.disc; S.ledger.unshift({t:'下單折抵手續費 '+z.sym,v:-z.disc,d:'11/14'}); } const c=calc(z); const h=S.holdings[z.sym];
-      if(h){ h.cost=+((h.cost*h.qty+c.price*c.shares)/(h.qty+c.shares)).toFixed(2); h.qty+=c.shares; } else S.holdings[z.sym]={qty:c.shares,cost:c.price,div:0};
-      S.trades.unshift({d:'2026/11/10',side:'買',sym:z.sym,qty:c.shares,price:c.price,reason:z.reason,mood:z.mood}); render(); toast('已成交（示意）'); break; }
-    case 'dset': S._dca[d.k]=d.k==='sym'?d.v:+d.v; render(); break;
-    case 'saveDca': S.dca={...S._dca}; S._dca=null; stack=[]; cur={name:'home',p:{}}; render(); toast('定期定額已設定（示意）'); break;
-    case 'limit': S.limit=Math.max(10,Math.min(50,S.limit+(+d.d))); render(); break;
-    case 'rule': S.rules[d.k]=!S.rules[d.k]; render(); break;
-    case 'rtime': S.rules.time=d.v; render(); break;
+    case 'fill': { const z=S.orders.find(q=>q.id===+d.id); z.status='filled'; if(z.disc){ S.credit-=z.disc; S.ledger.unshift({t:'下單折抵手續費 '+z.sym,v:-z.disc,d:'11/16'}); }
+      const c=calc(z); const h=S.holdings[z.sym];
+      if(h){ h.cost=+((h.cost*h.qty+c.price*c.shares)/(h.qty+c.shares)).toFixed(2); h.qty+=c.shares; } else S.holdings[z.sym]={qty:c.shares,cost:c.price};
+      S.trades.unshift({d:'2026/11/16',side:'買',sym:z.sym,qty:c.shares,price:c.price,reason:z.reason?reasonText(z):null,mood:z.mood}); render(); toast('已成交（示意）'); break; }
+    case 'rvtag': S._rv.tag=S._rv.tag===d.v?null:d.v; render(); break;
+    case 'saveRv': { const r=S._rv; (S.reviews[d.sym]=S.reviews[d.sym]||[]).unshift({d:'2026/11/16',tag:r.tag,txt:r.txt.trim()}); S._rv={tag:null,txt:''}; S.reviewed=true; render(); toast('已儲存回顧'); break; }
     case 'startLesson': startLesson(d.id); break;
-    case 'node': { const l=findL(d.id), nl=nextLesson(); if(l.soon){ toast('即將推出'); break; } if(S.done.includes(l.id)||(nl&&nl.id===l.id)) startLesson(l.id); else toast('先完成前面的關卡，就會解鎖'); break; }
+    case 'node': { const l=findL(d.id), nl=nextLesson(); if(S.done.includes(l.id)||(nl&&nl.id===l.id)) startLesson(l.id); else toast('先完成前面的關卡，就會解鎖'); break; }
     case 'chest': { if(d.open!=='1'){ toast('完成前一關就能打開寶箱'); break; } if(S.chests.includes(d.id)){ toast('這個寶箱已經領過了'); break; } S.chests.push(d.id); addPts(5,'打開寶箱'); render(); toast('寶箱打開！+5 學習點'+(S.pts>=100?'，可以兌換抵用金了':'')); break; }
-    case 'redeem': if(S.pts>=100){ S.pts-=100; S.ledger.unshift({t:'學習點兌換',v:-100,pt:true,d:'11/14'}); addCredit(10,'學習點兌換抵用金'); render(); toast('已兌換 10 元手續費抵用金'); } break;
+    case 'redeem': if(S.pts>=100){ S.pts-=100; S.ledger.unshift({t:'學習點兌換',v:-100,pt:true,d:'11/16'}); addCredit(10,'學習點兌換抵用金'); render(); toast('已兌換 10 元手續費抵用金'); } break;
     case 'lquit': S.lesson=null; back(); toast('已離開，這一關的進度不會保存'); break;
     case 'lsel': S.lesson.sel=+d.i; render(); break;
     case 'fpick': S.lesson.fill=d.v; render(); break;
@@ -1071,21 +1077,21 @@ document.addEventListener('click',e=>{
       if(ex.type==='choice') ok=L.sel===ex.a; else if(ex.type==='fill') ok=L.fill===ex.a; else if(ex.type==='sim'){ const c=simCalc(); ok=L.sim.lot==='零股'&&c.amt<=10000&&c.amt>=8000; }
       L.checked=true; L.right=ok; if(ok) L.correct++; else { L.mistakes++; L.queue.push(L.queue[L.pos]); } render(); break; }
     case 'lnext': { const L=S.lesson; L.pos++; if(L.pos>=L.queue.length) finishLesson(); else { resetEx(); render(); } break; }
-    case 'toPath': stack=[{name:'service',p:{}}]; cur={name:'learn',p:{}}; render(); break;
+    case 'toPath': stack=[{name:'home',p:{}}]; cur={name:'learn',p:{}}; render(); break;
     case 'doCta': { const l=findL(d.id); const [,kind,arg]=l.cta;
       if(kind==='buy'){ S.order=newOrder(arg,'零股'); S.tradeSub='order'; stack=[]; cur={name:'trade',p:{}}; }
-      else if(kind==='dca'){ S._dca=null; stack=[{name:'learn',p:{}}]; cur={name:'dca',p:{}}; }
-      else if(kind==='go'){ stack=[{name:'learn',p:{}}]; cur={name:arg,p:{}}; }
-      else { stack=[{name:'service',p:{}}]; cur={name:'learn',p:{}}; render(); toast(arg); break; }
+      else if(kind==='inv'){ S.tradeSub='inv'; stack=[]; cur={name:'trade',p:{}}; }
+      else { stack=[{name:'learn',p:{}}]; cur={name:arg,p:{}}; }
       render(); toast('實戰任務：把剛學到的試一次'); break; }
     case 'ask': ask(d.q); break;
-    case 'openAI': S.ai.open=true; renderOverlay(); renderCtx(); break;
-    case 'closeAI': S.ai.open=false; renderOverlay(); renderCtx(); break;
+    case 'openAI': S.ai.open=true; renderOverlay(); break;
+    case 'closeAI': S.ai.open=false; renderOverlay(); break;
     case 'aiGo': S.ai.open=false; if(d.g==='dca') S._dca=null; go(d.g,{}); break;
   }
 });
 
-renderPanel(); render();
+$('#fab').innerHTML=sprout(34,'happy')+'問小芽<span class="badge">新增</span>';
+render();
 })();
 </script>
 </body>
